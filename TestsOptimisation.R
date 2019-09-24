@@ -14,8 +14,8 @@ p        = 20 # c(20, 100)
 n        = 500 # c(100, 200, 500, 1000)
 b        = 3 # c(3, 5, 5, 20)
 blocsOn  = list(c(1,3))
-bo       = 1
 
+# simulation des donnees
 resBlocs = StructureCov(p, b, blocsOn, seed = 2)
 resBlocs$blocs
 D        = runif(p, 10^-4, 10^-2)
@@ -27,6 +27,7 @@ datas     = rmvnorm(n, rep(0, p), sigma = resmat$CovMat)
 p.part     = sapply(1:length(resBlocs$indblocs), function(i) length(resBlocs$indblocs[[i]]))
 (blocks     = rep(1:b, p.part))
 
+# test de la procedure
 p=profvis({
   IWT_Block = IWT_Block_precision(datas, blocks)
 })
@@ -34,6 +35,7 @@ p=profvis({
 htmlwidgets::saveWidget(p, "profile.html")
 browseURL("profile.html")
 
+# comparaison glmnet et penalized
 X = as.matrix(datas[,-1])
 Y = datas[,1]
 library(rbenchmark)
