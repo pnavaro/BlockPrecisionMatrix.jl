@@ -1,0 +1,8 @@
+install.packages("mvtnorm")
+install.packages("fields")
+install.packages("profvis")
+install.packages("here")
+install.packages("mixAK")
+install.packages("rbenchmark")
+install.packages("pnealized")
+install.packages("glmnet")
