@@ -9,3 +9,4 @@ profile.html
 *.swp
 Rplots.pdf
 .Rhistory
+Manifest.toml
