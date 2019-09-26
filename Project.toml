@@ -1,0 +1,8 @@
+name = "PrecisionMatrix"
+uuid = "afff2849-e78a-40d9-8939-5c1a05aaf5fc"
+authors = ["Pierre Navaro <pierre.navaro@math.cnrs.fr>"]
+version = "0.1.0"
+
+[deps]
+Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
