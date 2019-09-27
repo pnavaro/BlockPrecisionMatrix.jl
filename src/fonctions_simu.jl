@@ -83,11 +83,11 @@ function cov_simu(blocs, indblocs, blocsOn, D)
   P .= transpose(P)
   
   # Matrice de covariance
-  CovMat = P' * Diagonal(D) * P
+  CovMat = Hermitian(P' * Diagonal(D) * P)
   
   # Matrice de precision
   PreMat = P' * Diagonal(1 ./ D) * P
   
-  return Dict(:CovMat => CovMat, :PreMat => PreMat)
+  return Dict(:CovMat => collect(CovMat), :PreMat => PreMat)
 
 end
