@@ -1,15 +1,38 @@
-using Distributions
+using Random, LinearAlgebra, Distributions
 
-p        = 20   # (20, 100)
-n        = 500  # (100, 200, 500, 1000)
-b        = 3    # (3, 5, 5, 20)
+# +
+include("src/utils.jl")
+include("src/rotation_matrix.jl")
+include("src/fonctions_simu.jl")
+p        = 20 
+n        = 500
+b        = 3 
 blocsOn  = [[1,3]]
-
-# simulation des donnees
 resBlocs = structure_cov(p, b, blocsOn, seed = 2)
 resBlocs[:blocs]
+
 D        = rand(Uniform(1e-4, 1e-2), p)
-resmat   = CovSimu(resBlocs$blocs, resBlocs$indblocs, blocsOn, D = D)
-image.plot(resmat$CovMat)
-image.plot(resmat$PreMat)
+resmat   = cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
+                   blocsOn, D)
+
+setdiff(1:b, flatten(blocsOn))
+# -
+
+
+using Plots
+heatmap(resmat[:CovMat])
+
+heatmap(resmat[:PreMat])
+
+B1 = 1:16
+
+
+print(B1...)
+
+length(1:13)
+
+
+
+
+
 
