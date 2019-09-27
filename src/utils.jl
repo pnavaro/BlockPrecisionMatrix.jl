@@ -22,7 +22,7 @@ end
 function normalize(X)
     l2 = sqrt.(sum(X.^2, dims=1))
     l2 .+= l2 .== 0
-    return X / np.expand_dims(l2, axis)
+    return X ./ l2
 end
 
 function polynomial_features(X, degree)
@@ -30,7 +30,7 @@ function polynomial_features(X, degree)
     n_samples, n_features = size(X)
 
     function index_combinations()
-        combs = [with_replacement_combinations(1:n_features, i) for i in 0:degree+1]
+        combs = [with_replacement_combinations(1:n_features, i) for i in 0:degree]
         flat_combs = [item for sublist in combs for item in sublist]
         return flat_combs
     end
