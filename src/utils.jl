@@ -20,7 +20,7 @@ end
 
  """ Normalize the dataset X """
 function normalize(X)
-    l2 = sqrt.(sum(X.^2, dims=1))
+    l2 = sqrt.(sum(X.^2, dims=2))
     l2 .+= l2 .== 0
     return X ./ l2
 end
