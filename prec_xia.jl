@@ -1,18 +1,20 @@
-using RCall, Random, GLMNet, InvertedIndices, Statistics, Distributions
+using RCall, Random, GLMNet, InvertedIndices
+using Statistics, Distributions
 
+using LinearAlgebra
 nrows, ncols = 8, 5
 @rput ncols
 @rput nrows
-R"set.seed(1234)"
-X = rcopy(R"matrix(rnorm(nrows*ncols), nrows, ncols )")
-X
+R""" 
+X0 <- matrix(1:nrows*ncols, nrows, ncols)
+Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
+X <- backsolve( chol(Sigmainv), X0)"""
+X = rcopy(R"X")
 
 k = 1
-fitreg = glmnet(X[:,Not(k)],X[:,k], standardize=false)
+fitreg = glmnet(X[:,Not(k)],X[:,k], standardize=false);
 
 fitreg.betas
-
-
 
 predict(fitreg,X[:,Not(k)])
 
@@ -24,8 +26,8 @@ function prec_xia(X)
     reshat  = copy(X)
 
     for k in 1:ncols
-      fitreg = glmnet(X[:,Not(k)],X[:,k], standardize=false) 
-      betahat[:,k] .= vec(fitreg.betas)
+      fitreg = glmnet(X[:,Not(k)],X[:,k], standardize=false)
+      betahat[:,k] .= fitreg.betas
       reshat[:,k]  .= X[:,k] .- vec(predict(fitreg,X[:,Not(k)]))
     end
 
