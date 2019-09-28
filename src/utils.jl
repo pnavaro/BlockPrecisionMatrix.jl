@@ -1,6 +1,28 @@
 import Combinatorics: with_replacement_combinations
 using Random, LinearAlgebra
 
+""" Random shuffle of the samples in X and y """
+function shuffle_data(X, y, seed)
+    rng = MersenneTwister(seed)
+    idx = randperm(rng, size(X)[1])
+    return X[idx,:], y[idx]
+end
+
+""" Split the data into train and test sets """
+function train_test_split(X :: Array{Float64,2}, y :: Vector{Float64}; 
+                          test_size=0.5, shuffle=true, seed=nothing)
+    if shuffle
+        X, y = shuffle_data(X, y, seed)
+    end
+    # Split the training data from test data in the ratio specified in
+    # test_size
+    split_i = length(y) - (length(y) ÷ trunc(Int64,1 / test_size)) :: Int64
+    X_train, X_test = X[1:split_i,:], X[split_i:end,:]
+    y_train, y_test = y[1:split_i], y[split_i:end]
+
+    return X_train, X_test, y_train, y_test
+end
+
  """ Normalize the dataset X """
 function normalize(X)
     l2 = sqrt.(sum(X.^2, dims=2))
