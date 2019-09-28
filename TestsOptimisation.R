@@ -6,10 +6,10 @@ library(parallel)
 library(profvis)
 library(here)
 
-source(here('FonctionsSimu.R'))
+source(here('R','FonctionsSimu.R'))
 #source('~/Dropbox/code_BlockCovarianceTest/blocks_loop.R', echo = TRUE)
-source(here('Precision_IWT_function.R'), echo=TRUE)
-source(here('utilities.R'), echo = TRUE)
+source(here('R','Precision_IWT_function.R'), echo=TRUE)
+source(here('R','utilities.R'), echo = TRUE)
 
 p        = 20 # c(20, 100)
 n        = 500 # c(100, 200, 500, 1000)
