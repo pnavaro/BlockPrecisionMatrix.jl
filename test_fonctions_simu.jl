@@ -25,8 +25,6 @@ heatmap(resmat[:PreMat])
 datas = rand!( MvNormal(resmat[:CovMat]), zeros(Float64,(p, n)))
 
 
-indblocs
-
 p_part = map( length,  resBlocs[:indblocs])
 
 
