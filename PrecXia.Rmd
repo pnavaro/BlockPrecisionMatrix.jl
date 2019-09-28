@@ -6,7 +6,7 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.1'
-      jupytext_version: 1.2.3
+      jupytext_version: 1.2.4
   kernelspec:
     display_name: R
     language: R
@@ -17,15 +17,22 @@ jupyter:
 library(glmnet)
 nrows <- 8
 ncols <- 5
-set.seed(1234)
-X0 <- matrix(rnorm(nrows*ncols), nrows, ncols)
+
+X0 <- matrix(1:nrows*ncols, nrows, ncols)
 Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
 X <- backsolve( chol(Sigmainv), X0)
-X0
+X
 ```
 
 ```{r}
-X
+k <- 1
+fitreg  = glmnet::glmnet(X[,-k],X[,k], family="gaussian",
+                             standardize = FALSE)
+fitreg$beta
+```
+
+```{r}
+
 ```
 
 ```{r}
