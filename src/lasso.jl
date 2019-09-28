@@ -58,6 +58,40 @@ struct LassoRegression
 
 end
 
+function fit(self, X, y)
+
+    X = normalize(polynomial_features(X, self.degree))
+    # Insert constant ones for bias weights
+    X = hcat( ones(eltype(X), size(X)[1]), X)
+    n_features = size(X)[2]
+
+    # Initialize weights randomly [-1/N, 1/N]
+    limit = 1 / sqrt(n_features)
+    w = -limit .+ 2 .* limit .* rand(n_features)
+
+    # Do gradient descent for n_iterations
+    for i in 1:self.n_iterations
+        y_pred = X * w
+        # Gradient of l2 loss w.r.t w
+        grad_w  = - ((y .- y_pred)' * X)' .+ grad(self.regularization, w)
+        # Update the weights
+        w .-= self.learning_rate .* grad_w
+    end
+
+    return w
+
+end
+
+function predict(self, w, X)
+
+    X = normalize(polynomial_features(X, self.degree))
+    # Insert constant ones for bias weights
+    X = hcat( ones(eltype(X), size(X)[1]), X)
+    n_features = size(X)[2]
+    return X * w
+
+end
+
 function fit_and_predict(self, X, y)
 
     X = normalize(polynomial_features(X, self.degree))
