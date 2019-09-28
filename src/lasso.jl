@@ -60,7 +60,6 @@ end
 
 function fit_and_predict(self, X, y)
 
-    @show size(y)
     X = normalize(polynomial_features(X, self.degree))
     # Insert constant ones for bias weights
     X = hcat( ones(eltype(X), size(X)[1]), X)
