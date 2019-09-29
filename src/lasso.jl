@@ -98,3 +98,92 @@ function fit_and_predict(model :: LassoRegression, X :: Array{Float64,2}, y :: V
     return X * model.w
 
 end
+
+"""
+Soft threshold function used for normalized 
+data and lasso regression
+"""
+function soft_threshold(rho :: Float64, lamda :: Float64)
+    if rho < - lamda
+        return (rho + lamda)
+    elseif rho >  lamda
+        return (rho - lamda)
+    else
+        return 0
+    end
+end
+
+"""
+Coordinate gradient descent for lasso regression 
+for normalized data. 
+
+The intercept parameter allows to specify whether 
+or not we regularize ``\\theta_0``
+"""    
+function coordinate_descent_lasso(X, y, λ, num_iters=100)
+    
+    #Initialisation of useful values 
+    m, n = size(X)
+    β = ones(Float64, n)
+    X .= X ./ sqrt.(sum(X.^2, dims=1))
+    
+    #Looping until max number of iterations
+    for i in 1:num_iters
+        
+        #Looping through each coordinate
+        for j in 1:n
+            
+            #Vectorized implementation
+            X_j = X[:,j]
+            y_pred = X * theta
+            rho = X_j' * (y .- y_pred  .+ theta[j] .* X_j)
+        
+            theta[j] =  soft_threshold(rho..., lamda)
+        end
+    end
+            
+    return vec(theta)
+end
+
+"""
+Coordinate gradient descent for lasso regression 
+for normalized data. 
+
+The intercept parameter allows to specify whether 
+or not we regularize ``\\theta_0``
+"""    
+function coordinate_descent_lasso(theta, X, y; lamda = .01, 
+        num_iters=100, intercept = false)
+    
+    #Initialisation of useful values 
+    m, n = size(X)
+    X .= X ./ sqrt.(sum(X.^2, dims=1)) #normalizing X in case it was not done before
+    
+    #Looping until max number of iterations
+    for i in 1:num_iters
+        
+        #Looping through each coordinate
+        for j in 1:n
+            
+            #Vectorized implementation
+            X_j = X[:,j]
+            y_pred = X * theta
+            rho = X_j' * (y .- y_pred  .+ theta[j] .* X_j)
+        
+            #Checking intercept parameter
+            if intercept  
+                if j == 0
+                    theta[j] =  first(rho) 
+                else
+                    theta[j] =  soft_threshold(rho..., lamda)
+                end
+            end
+
+            if !intercept
+                theta[j] =  soft_threshold(rho..., lamda)
+            end
+        end
+    end
+            
+    return vec(theta)
+end
