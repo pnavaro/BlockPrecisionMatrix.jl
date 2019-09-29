@@ -29,7 +29,26 @@ model = LassoRegression(X_train, y_train,
                         n_iterations=4000)
 
 
+
+
 # +
 y_pred = predict(model, X_test)
 
 scatter( X_test, y_pred)
+scatter!(X_test, y_test)
+
+# +
+include("src/lasso.jl")
+
+fitreg = LassoRegression(degree=15, 
+                         reg_factor=0.05,
+                         learning_rate=0.001,
+                         n_iterations=4000)
+
+y_line = fit_and_predict(fitreg, X, y)
+
+plot(X, y_line)
+scatter!(X, y, markersize=1)
+# -
+
+
