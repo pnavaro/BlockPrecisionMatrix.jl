@@ -28,6 +28,17 @@ datas     = rmvnorm(n, rep(0, p), sigma = resmat$CovMat)
 p.part     = sapply(1:length(resBlocs$indblocs), function(i) length(resBlocs$indblocs[[i]]))
 (blocks     = rep(1:b, p.part))
 
+library(microbenchmark)
+X = as.matrix(datas[,-1])
+Y = datas[,1]
+res <- microbenchmark(glmnet(X, Y, family = "gaussian", lambda = 2*sqrt(var(Y)*log(ncol(X))/nrow(X))))
+
+print(res)
+
+
+
+
+
 # test de la procedure
 p=profvis({
   IWT_Block = IWT_Block_precision(datas, blocks)
