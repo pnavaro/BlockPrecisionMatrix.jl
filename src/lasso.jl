@@ -1,7 +1,6 @@
 using Statistics
 
 
-# +
 """
     Linear regression model with a regularization factor which does both variable selection 
     and regularization. Model that tries to balance the fit of the model with respect to the training 
@@ -28,9 +27,15 @@ struct LassoRegression
     learning_rate :: Float64
     w             :: Array{Float64}
 
-    function LassoRegression( X :: Array{Float64, 2}, 
-                              y :: Vector{Float64};
-                              degree, reg_factor, 
+    function LassoRegression( ; degree, reg_factor, 
+                                learning_rate, n_iterations)
+
+        new( degree, reg_factor, n_iterations, learning_rate, Float64[])
+
+    end
+
+
+    function LassoRegression( X, y; degree, reg_factor, 
                               learning_rate, n_iterations)
 
         X = normalize(polynomial_features(X, degree))
@@ -57,43 +62,39 @@ struct LassoRegression
 
 end
 
-# +
-function predict(self :: LassoRegression, X)
+function predict(model, X)
 
-    X = normalize(polynomial_features(X, self.degree))
+    X = normalize(polynomial_features(X, model.degree))
     # Insert constant ones for bias weights
     X = hcat( ones(eltype(X), size(X)[1]), X)
     n_features = size(X)[2]
-    return X * self.w
+    return X * model.w
 
 end
 
-# +
-function fit_and_predict(self :: LassoRegression, X, y)
+function fit_and_predict(model :: LassoRegression, X :: Array{Float64,2}, y :: Vector{Float64})
 
-    X = normalize(polynomial_features(X, self.degree))
+    X = normalize(polynomial_features(X, model.degree))
     # Insert constant ones for bias weights
     X = hcat( ones(eltype(X), size(X)[1]), X)
     n_features = size(X)[2]
 
     # Initialize weights randomly [-1/N, 1/N]
     limit = 1 / sqrt(n_features)
-    self.w = Float64[]
-    push!(self.w, rand(n_features)...)
-    self.w .= -limit .+ 2 .* limit .* self.w
+    if length(model.w) == 0
+        push!(model.w, rand(n_features)...)
+    end
+    model.w .= -limit .+ 2 .* limit .* model.w
 
     # Do gradient descent for n_iterations
-    for i in 1:self.n_iterations
-        y_pred = X * self.w
+    for i in 1:model.n_iterations
+        y_pred = X * model.w
         # Gradient of l2 loss w.r.t w
-        grad_w  = - ((y .- y_pred)' * X)' .+ self.reg_factor .* sign.(self.w)
+        grad_w  = - ((y .- y_pred)' * X)' .+ model.reg_factor .* sign.(model.w)
         # Update the weights
-        self.w .-= self.learning_rate .* grad_w
+        model.w .-= model.learning_rate .* grad_w
     end
 
-    return X * self.w
+    return X * model.w
 
 end
-# -
-
-
