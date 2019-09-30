@@ -1,7 +1,6 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,jl:light
 #     text_representation:
 #       extension: .jl
 #       format_name: light
@@ -14,7 +13,8 @@
 # ---
 
 using SparseRegression, Lasso, DataFrames
-using LinearAlgebra
+using LinearAlgebra, InvertedIndices
+using MLDataUtils, ProgressMeter
 
 maxit = 10000
 tol = 1e-5
@@ -112,10 +112,6 @@ function lla(X, y, th_0, s_0, l, n)
     return th_k, l
 end
 
-a = [1, 2, 3]
-b = [2, 4, 7]
-max(a, b)
-
 function ISTA(X, y, th_0, s_0, l, n)
     i = 0
     th_prev = th_0
@@ -133,26 +129,59 @@ function ISTA(X, y, th_0, s_0, l, n)
 end
 
 function gen_5folds(X, y)
-    X_folds = np.split(X, 5)
-    y_folds = np.split(y, 5)
+    X_folds = kfolds(X, 5)
+    y_folds = kfolds(y, 5)
     return X_folds, y_folds
 end
 
-# +
-x = randn(10_000, 50)
-y = x * range(-1, stop=1, length=50) + randn(10_000)
+function cv_lambda(X, y, th_0, s_0, lmbda_0, n)
+    a = 3
+    X_folds, y_folds = gen_5folds(X, y)
+    errs = Float64[]
+    for (X,y) in zip(X_folds, y_folds)
+        th_hat, l = lla(X, y, th_0, s_0, lmbda_0, n)
+        push!(errs, 1/(2*size(y))*norm(y .- X * th_hat)^2 + sum(scad(l, abs.(th_hat), a)))
+    end
+    return sum(errs)/length(X_folds)
+end
 
-s = SModel(x, y, L2DistLoss(), L2Penalty())
-@time learn!(s)
-s
-# -
+N = [100, 200]
+D = [256, 512, 1024]
+s = 10
+n = N[1]
+d = D[1]
+lmbda = 0.85
 
-data = DataFrame(X=[1,2,3], Y=[2,4,7])
-
-m = fit(LassoModel, @formula(Y ~ X), data)
-
-X =[1,2,3]
-y = [2, 4, 7]
-fit(LassoPath, X, y)
+function run()
+    for n in N
+        for d in D
+            evals_lasso = []
+            evals_ista = []
+            @showprogress 1 for _ in 1:200
+                #cov =  numpy.fromfunction(lambda i, j: 0.5**(np.abs(i-j)), (n,d)) # (P2)
+                cov = 1.0 * Matrix(I,d,d)
+                X = rand(MvNormal(cov),n)
+                e = rand(Normal(0,1.5),n)
+                th_star = vcat([2,2,2,-1.5,-1.5,-1.5,2,2,2,2], zeros(d-10))
+                y = X * th_star .+ e
+    
+                evs = eigvals(X'X)
+                L = maximum(real(evs))
+                s_0 = 1/L
+                th_0 = zeros(Float64, d)
+                lmbda_0 = lmbda * ones(d)
+    
+                th_hat,l_hat = lla(X, y, th_0, s_0, lmbda_0, n)
+                clf = Lasso(alpha = lmbda)
+                clf.fit(X, y)
+                th_lasso = clf.coef_
+                push!(evals_lasso, evaluate(th_lasso, th_star))
+                push!(evals_ista, evaluate(th_hat, th_star))
+            end
+            println("lasso",n,d,avg_evaluate(evals_lasso))
+            println("ista",n,d,avg_evaluate(evals_ista))
+        end
+    end
+end
 
 
