@@ -8,11 +8,13 @@ library(fields)
 library(parallel)
 library(profvis)
 library(here)
+library(ncvreg)
+library(tictoc)
 
-source(here('R','FonctionsSimu.R'))
+source(here('R','FonctionsSimu.R'));
 #source('~/Dropbox/code_BlockCovarianceTest/blocks_loop.R', echo = TRUE)
-source(here('R','Precision_IWT_function.R'), echo=TRUE)
-source(here('R','utilities.R'), echo = TRUE)
+source(here('R','Precision_IWT_function.R'), echo=TRUE);
+source(here('R','utilities.R'), echo = TRUE);
 
 p        = 20 # c(20, 100)
 n        = 500 # c(100, 200, 500, 1000)
@@ -103,6 +105,14 @@ permute = function(x,n){
   return(result)
 }
 
+# ## ncvreg 
+#
+# **Regularization Paths for SCAD and MCP Penalized Regression Models**
+#
+# Fits regularization paths for linear regression, GLM, and Cox regression models using lasso or nonconvex penalties, in particular the minimax concave penalty (MCP) and smoothly clipped absolute deviation (SCAD) penalty, with options for additional L2 penalties (the "elastic net" idea). Utilities for carrying out cross-validation as well as post-fitting visualization, summarization, inference, and prediction are also provided.
+#
+# https://cran.r-project.org/web/packages/ncvreg/index.html
+
 # function returning the fitted values pf regression with the SCAD penalty (used for conditional permutations)
 SCADmod = function(yvector,x,lambda){
   regSCAD = ncvreg::ncvreg(x,yvector,penalty='SCAD',lambda=lambda)
@@ -140,9 +150,7 @@ seeds = round(runif(B,0,1000000))
 responsible.test = matrix(nrow=p,ncol=p)
 ntests.blocks = zeromatrix = matrix(0,nrow=p,ncol=p)
 # -
-
-
-
+tic()
 for(ix in 2:nblocks){ # x coordinate starting point.
   for(lx in 0:(nblocks-ix)){ # length on x axis of the rectangle
       
@@ -210,6 +218,7 @@ for(ix in 2:nblocks){ # x coordinate starting point.
     }
   }
 }
+toc()
 
 
 responsible.test
