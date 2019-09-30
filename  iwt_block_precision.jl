@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-using Random, LinearAlgebra, Distributions, BenchmarkTools, GLMNet
+using Random, LinearAlgebra, Distributions, 
+using BenchmarkTools, GLMNet, Plots
 
 # +
 include("src/utils.jl")
@@ -18,8 +19,11 @@ resmat   = cov_simu(resBlocs[:blocs], resBlocs[:indblocs],
 # -
 
 
-using Plots
 heatmap(resmat[:CovMat])
+
+plotlyjs()
+
+heatmap(resmat[:CovMat], c=ColorGradient([:red,:blue]))
 
 heatmap(resmat[:PreMat])
 
@@ -33,11 +37,6 @@ blocks  =vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...);
 
 B = 1000
 estimation = :SCAD
-
-X = data[:,2:end]
-Y = data[:,1]
-nrows, ncols = size(X)
-@btime fit = glmnet(X, Y, lambda = [2*sqrt(var(Y)*log(ncols)/nrows)])
 
 n, p  = size(data)
 
