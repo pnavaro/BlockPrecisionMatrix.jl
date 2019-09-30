@@ -1,3 +1,8 @@
+local({
+  r <- getOption("repos")
+  r["CRAN"] <- "https://pbil.univ-lyon1.fr/CRAN/"
+  options(repos = r)
+})
 install.packages("mvtnorm")
 install.packages("fields")
 install.packages("profvis")
@@ -6,3 +11,6 @@ install.packages("mixAK")
 install.packages("rbenchmark")
 install.packages("penalized")
 install.packages("glmnet")
+install.packages("ncvreg")
+install.packages("tictoc")
+install.packages("microbenchmark")
