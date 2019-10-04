@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -5,19 +6,19 @@
 #       extension: .jl
 #       format_name: light
 #       format_version: '1.4'
-#       jupytext_version: 1.2.3
+#       jupytext_version: 1.2.4
 #   kernelspec:
 #     display_name: Julia 1.2.0
 #     language: julia
 #     name: julia-1.2
 # ---
 
-using SparseRegression, Lasso, DataFrames
 using LinearAlgebra, InvertedIndices
 using MLDataUtils, ProgressMeter
+using Lasso
 
-maxit = 10000
-tol = 1e-5
+const MAXIT = 10000
+const TOL = 1e-5
 
 function l2_error(th_hat, th_star)
     norm(th_hat .- th_star)
@@ -25,7 +26,7 @@ end
 
 function fp(th_hat, th_star)
     fp = 0
-    for i in 1:size(th_star.shape)[1]
+    for (t1,t2) in zip(eachrow(th_hat), eachrow(th_star)) 
         if th_star[i] == 0
             if th_hat[i] != 0
                 fp += 1
@@ -37,7 +38,7 @@ end
 
 function fn(th_hat, th_star)
     fn = 0
-    for i in 1:size(th_star.shape)[0]
+    for i in 1:size(th_star)[1]
         if th_star[i] != 0
             if th_hat[i] == 0
                 fn += 1
@@ -100,29 +101,31 @@ function backtrack(s_prev) end
 function lla(X, y, th_0, s_0, l, n)
     i = 0
     a = 3
-    th_prev = th_0
+    th_prev = copy(th_0)
+    th_k = similar(th_prev)
     for i in 1:MAXIT
-        th_k = ISTA(X, y, th_prev, s_0, l, n)
+        th_k .= ISTA(X, y, th_prev, s_0, l, n)
         l = update_lambda(l,abs.(th_k),a)
         if norm(th_k .- th_prev,Inf) <= TOL
             break
         end
-        th_prev = th_k
+        th_prev .= th_k
     end
     return th_k, l
 end
 
 function ISTA(X, y, th_0, s_0, l, n)
     i = 0
-    th_prev = th_0
+    th_prev = copy(th_0)
+    th_k = similar(th_prev)
     s_k = s_0
     for i in 1:MAXIT
-        th_k = th_prev .+ s_k/n * X' * (y - X * th_prev)
-        th_k = sign.(th_k) * max(abs.(th_k) .- s_k*l, zeros(d))
+        th_k .= th_prev .+ s_k/n * X * (y .- X' * th_prev)
+        th_k .= sign.(th_k) .* max.(abs.(th_k) .- s_k*l, zeros(d))
         if norm(th_k .- th_prev,Inf) <= TOL
             break
         end
-        th_prev = th_k
+        th_prev .= th_k
     end
 
     return th_k
@@ -155,15 +158,14 @@ lmbda = 0.85
 function run()
     for n in N
         for d in D
-            evals_lasso = []
-            evals_ista = []
-            @showprogress 1 for _ in 1:200
-                #cov =  numpy.fromfunction(lambda i, j: 0.5**(np.abs(i-j)), (n,d)) # (P2)
+            evals_lasso = Float64[]
+            evals_ista = Float64[]
+            @showprogress 1 for i in 1:200
                 cov = 1.0 * Matrix(I,d,d)
                 X = rand(MvNormal(cov),n)
                 e = rand(Normal(0,1.5),n)
                 th_star = vcat([2,2,2,-1.5,-1.5,-1.5,2,2,2,2], zeros(d-10))
-                y = X * th_star .+ e
+                y = X' * th_star .+ e
     
                 evs = eigvals(X'X)
                 L = maximum(real(evs))
@@ -172,9 +174,12 @@ function run()
                 lmbda_0 = lmbda * ones(d)
     
                 th_hat,l_hat = lla(X, y, th_0, s_0, lmbda_0, n)
-                clf = Lasso(alpha = lmbda)
-                clf.fit(X, y)
-                th_lasso = clf.coef_
+                dist = Normal()
+                link = IdentityLink()
+                X = transpose(X)
+                clf = fit(LassoPath,  X, y, dist, link; α = lmbda)
+                th_lasso = clf.coefs
+                @show size(th_lasso)
                 push!(evals_lasso, evaluate(th_lasso, th_star))
                 push!(evals_ista, evaluate(th_hat, th_star))
             end
@@ -183,5 +188,7 @@ function run()
         end
     end
 end
+
+run()
 
 
