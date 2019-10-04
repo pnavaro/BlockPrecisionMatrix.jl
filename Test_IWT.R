@@ -115,7 +115,8 @@ permute = function(x,n){
 
 # function returning the fitted values pf regression with the SCAD penalty (used for conditional permutations)
 SCADmod = function(yvector,x,lambda){
-  regSCAD = ncvreg::ncvreg(x,yvector,penalty='SCAD',lambda=lambda)
+  regSCAD = ncvreg::ncvreg(x,yvector,
+                           penalty='SCAD',lambda=lambda)
   fitted = cbind(1,x) %*% regSCAD$beta
   return(fitted)
 }
@@ -127,7 +128,8 @@ permute.conditional = function(y,n,data.complement,estimation){
   # SCAD/OLS estimaytion
   fitted = switch(estimation,
                   LM=lm.fit(cbind(1,data.complement),y)$fitted,
-                  SCAD=apply(y,2,SCADmod,x=data.complement,lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
+                  SCAD=apply(y,2,SCADmod,x=data.complement,
+                             lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
 
   residuals = y - fitted
 
