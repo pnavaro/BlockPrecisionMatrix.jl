@@ -1,15 +1,43 @@
 # Function estimating the precision matrix with the method from Xia et al (code Madison)
 library(glmnet)
 
+# PrecXia = function(X){
+#   n = nrow(X)
+#   betahat = matrix(0,ncol(X)-1,ncol(X))
+#   reshat  = X
+#   for (k in 1:ncol(X)){
+#     fitreg  = glmnet(X[,-k],X[,k],family="gaussian",lambda = 2*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE) 
+#     betahat[,k] = as.vector(fitreg$beta)
+#     reshat[,k]  = X[,k]-as.vector(predict(fitreg,X[,-k]))
+#   }
+#   rtilde = cov(reshat)*(n-1)/n
+#   rhat   = rtilde
+#   for (i in 1:(ncol(X)-1)){
+#     for (j in (i+1):ncol(X)){
+#       rhat[i,j] = -(rtilde[i,j]+rtilde[i,i]*betahat[i,j]+rtilde[j,j]*betahat[j-1,i])
+#       rhat[j,i] = rhat[i,j]
+#     }
+#   }
+#   Tprec  = 1/rhat
+#   TprecStd = Tprec
+#   for (i in 1:(ncol(X)-1)){
+#     for (j in (i+1):ncol(X)){
+#       Tprec[i,j] = Tprec[j,i] = rhat[i,j]/(rhat[i,i]*rhat[j,j])
+#       thetahatij = (1+(betahat[i,j]^2*rhat[i,i]/rhat[j,j]))/(n*rhat[i,i]*rhat[j,j])   
+#       TprecStd[i,j] = TprecStd[j,i] = Tprec[i,j]/sqrt(thetahatij)
+#     }
+#   }
+#   
+#   MatPrecXia = list(Tprec=Tprec,TprecStd=TprecStd)
+# }
+
 PrecXia = function(X){
   n = nrow(X)
-  betahat = matrix(0,ncol(X)-1,ncol(X))
-  reshat  = X
-  for (k in 1:ncol(X)){
-    fitreg  = glmnet(X[,-k],X[,k],family="gaussian",lambda = 2*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE) 
-    betahat[,k] = as.vector(fitreg$beta)
-    reshat[,k]  = X[,k]-as.vector(predict(fitreg,X[,-k]))
-  }
+
+  Xc      = scale(X,center=TRUE,scale=FALSE)
+  betahat = sapply(1:ncol(X),FUN=function(k) as.vector(glmnet(X[,-k],X[,k],family="gaussian",lambda = sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE)$beta))
+  reshat  = sapply(1:ncol(X),FUN=function(k) Xc[,k] - colSums(t(Xc[,-k])*betahat[,k]))
+
   rtilde = cov(reshat)*(n-1)/n
   rhat   = rtilde
   for (i in 1:(ncol(X)-1)){
@@ -18,19 +46,16 @@ PrecXia = function(X){
       rhat[j,i] = rhat[i,j]
     }
   }
-  Tprec  = 1/rhat
-  TprecStd = Tprec
+  TprecStd = 1/rhat
   for (i in 1:(ncol(X)-1)){
     for (j in (i+1):ncol(X)){
-      Tprec[i,j] = Tprec[j,i] = rhat[i,j]/(rhat[i,i]*rhat[j,j])
-      thetahatij = (1+(betahat[i,j]^2*rhat[i,i]/rhat[j,j]))/(n*rhat[i,i]*rhat[j,j])   
-      TprecStd[i,j] = TprecStd[j,i] = Tprec[i,j]/sqrt(thetahatij)
+      thetahatij = (1+(betahat[i,j]^2*rhat[i,i]/rhat[j,j]))/(n*rhat[i,i]*rhat[j,j])
+      TprecStd[i,j] = TprecStd[j,i] = rhat[i,j]/((rhat[i,i]*rhat[j,j])*sqrt(thetahatij))
     }
   }
-  
-  MatPrecXia = list(Tprec=Tprec,TprecStd=TprecStd)
-}
 
+  return(TprecStd)
+}
 
 
 # function performing the test on blocks and adjusting the results
@@ -49,7 +74,8 @@ IWT_Block_precision <- function(data,blocks,B=1000,estimation='SCAD'){
     PrecMat = PrecXia(data.orig)
     #Rhohat = cor(block1,block2,method='pearson')
     #Rohat.std = Rhohat^2/(1-Rhohat^2)
-    submat = PrecMat$TprecStd[points.x,points.y]
+    #submat = PrecMat$TprecStd[points.x,points.y]
+    submat = PrecMat[points.x,points.y]
     return(sum(submat)^2) # We use the Xia estimator for the precision matrix
   }
   
