@@ -6,10 +6,10 @@ library(parallel)
 library(profvis)
 library(here)
 
-source(here('FonctionsSimu.R'))
+source(here('R','FonctionsSimu.R'))
 #source('~/Dropbox/code_BlockCovarianceTest/blocks_loop.R', echo = TRUE)
-source(here('Precision_IWT_function.R'), echo=TRUE)
-source(here('utilities.R'), echo = TRUE)
+source(here('R','Precision_IWT_function.R'), echo=TRUE)
+source(here('R','utilities.R'), echo = TRUE)
 
 p        = 20 # c(20, 100)
 n        = 500 # c(100, 200, 500, 1000)
@@ -27,6 +27,17 @@ image.plot(resmat$PreMat)
 datas     = rmvnorm(n, rep(0, p), sigma = resmat$CovMat)
 p.part     = sapply(1:length(resBlocs$indblocs), function(i) length(resBlocs$indblocs[[i]]))
 (blocks     = rep(1:b, p.part))
+
+library(microbenchmark)
+X = as.matrix(datas[,-1])
+Y = datas[,1]
+res <- microbenchmark(glmnet(X, Y, family = "gaussian", lambda = 2*sqrt(var(Y)*log(ncol(X))/nrow(X))))
+
+print(res)
+
+
+
+
 
 # test de la procedure
 p=profvis({
