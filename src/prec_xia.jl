@@ -1,16 +1,6 @@
-# -*- coding: utf-8 -*-
-using RCall, Random, GLMNet, InvertedIndices
+using Random, GLMNet, InvertedIndices
 using Statistics, Distributions
-
 using LinearAlgebra
-nrows, ncols = 8, 5
-@rput ncols
-@rput nrows
-R""" 
-X0 <- matrix(1:nrows*ncols, nrows, ncols)
-Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
-X <- backsolve( chol(Sigmainv), X0)"""
-X = rcopy(R"X")
 
 function prec_xia( X :: Array{Float64, 2} )
     
@@ -50,8 +40,3 @@ function prec_xia( X :: Array{Float64, 2} )
 
     Tprec, TprecStd
 end
-
-
-prec_xia(X)
-
-
