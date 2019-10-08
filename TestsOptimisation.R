@@ -42,3 +42,44 @@ Y = datas[,1]
 library(rbenchmark)
 benchmark(glmnet(X, Y, family = "gaussian", lambda = 2*sqrt(var(Y)*log(ncol(X))/nrow(X)), standardize = FALSE),
           penalized(Y, X, lambda1 = 2*sqrt(var(Y)*log(ncol(X))/nrow(X))))
+
+#### optimisation PrecXia
+
+X = datas
+
+benchmark({Xc  = scale(X,center=TRUE,scale=FALSE)
+betahat = sapply(1:ncol(X),FUN=function(k) as.vector(glmnet(X[,-k],X[,k],family="gaussian",lambda = 2*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE)$beta))
+reshat2 = sapply(1:ncol(X),FUN=function(k) Xc[,k] - colSums(t(Xc[,-k])*betahat[,k])) 
+},{  Xc      = scale(X,center=TRUE,scale=FALSE)
+betahat = sapply(1:ncol(X),FUN=function(k) as.vector(glmnet(X[,-k],X[,k],family="gaussian",lambda = (1:10)/5*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE)$beta))
+reshat  = sapply(1:ncol(X),FUN=function(k) Xc[,k] - colSums(t(Xc[,-k])*betahat[,k])) 
+})
+
+
+PrecXia = function(X){
+  n = nrow(X)
+  
+  Xc      = scale(X,center=TRUE,scale=FALSE)
+  betahat = sapply(1:ncol(X),FUN=function(k) as.vector(glmnet(X[,-k],X[,k],family="gaussian",lambda = (1:20)/10*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE)$beta))
+  reshat  = sapply(1:ncol(X),FUN=function(k) Xc[,k] - colSums(t(Xc[,-k])*betahat[,k])) 
+
+  rtilde = cov(reshat)*(n-1)/n
+  rhat   = rtilde
+  for (i in 1:(ncol(X)-1)){
+    for (j in (i+1):ncol(X)){
+      rhat[i,j] = -(rtilde[i,j]+rtilde[i,i]*betahat[i,j]+rtilde[j,j]*betahat[j-1,i])
+      rhat[j,i] = rhat[i,j]
+    }
+  }
+  TprecStd = 1/rhat
+  for (i in 1:(ncol(X)-1)){
+    for (j in (i+1):ncol(X)){
+      thetahatij = (1+(betahat[i,j]^2*rhat[i,i]/rhat[j,j]))/(n*rhat[i,i]*rhat[j,j])   
+      TprecStd[i,j] = TprecStd[j,i] = rhat[i,j]/((rhat[i,i]*rhat[j,j])*sqrt(thetahatij))
+    }
+  }
+  
+  return(TprecStd)
+}
+
+benchmark(PrecXia(X))
