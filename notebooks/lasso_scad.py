@@ -152,28 +152,3 @@ for n in N:
             evals_ista.append(evaluate(th_hat, th_star))
         print('lasso',n,d,avg_evaluate(evals_lasso))
         print('ista',n,d,avg_evaluate(evals_ista))
-
-"""
-X = np.random.normal(0,1,(n,d))
-e = np.random.normal(0,1.5,n)
-th_star = np.array([2,2,2,-1.5,-1.5,-1.5,2,2,2,2] + [0]*(d-10))
-y = X.dot(th_star) + e
-
-evs = la.eig(X.T.dot(X))[0]
-L = np.amax(np.real(evs))
-s_0 = 1/L;
-th_0 = np.zeros(d, dtype=float)
-lmbda_0 = np.array([lmbda]*d)
-
-# Cross validation for lambda_0 - best found to be 0.9
-#for lmbda in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
-#    lmbda_0 = np.array([lmbda]*d)
-#    print(lmbda, cv_lambda(X, y, th_0, s_0, lmbda_0, n))
-
-th_hat,l_hat = lla(X, y, th_0, s_0, lmbda_0, n)
-clf = Lasso(alpha = lmbda)
-clf.fit(X, y)
-th_lasso = clf.coef_
-print('ista',evaluate(th_hat, th_star))
-print('sklearn',evaluate(th_lasso, th_star))
-"""
