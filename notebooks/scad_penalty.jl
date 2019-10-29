@@ -13,9 +13,26 @@
 #     name: julia-1.2
 # ---
 
+# # Smoothly Clipped Absolute Deviation (SCAD) 
+
 using LinearAlgebra, InvertedIndices
 using MLDataUtils, ProgressMeter
 using Lasso
+
+dist = Normal()
+link = IdentityLink()
+X, y = [0 0; 1 1; 2 2], [0, 1, 2]
+
+clf = fit(LassoPath,  X, y, dist, link; α = 0.1)
+Matrix(clf.coefs)
+
+using GLMNet
+
+path = glmnet(X, y)
+
+path.betas
+
+
 
 const MAXIT = 10000
 const TOL = 1e-5
@@ -26,11 +43,9 @@ end
 
 function fp(th_hat, th_star)
     fp = 0
-    for (t1,t2) in zip(eachrow(th_hat), eachrow(th_star)) 
-        if th_star[i] == 0
-            if th_hat[i] != 0
-                fp += 1
-            end
+    for i in 1:size(th_star)[1]
+        if th_star[i] == 0 && th_hat[i] != 0
+            fp += 1
         end
     end
     fp
@@ -39,19 +54,17 @@ end
 function fn(th_hat, th_star)
     fn = 0
     for i in 1:size(th_star)[1]
-        if th_star[i] != 0
-            if th_hat[i] == 0
-                fn += 1
-            end
+        if th_star[i] != 0 && th_hat[i] == 0
+            fn += 1
         end
     end
     fn
 end
 
 function evaluate(th_hat, th_star)
-    return Dict(:l2_error => l2_error(th_hat, th_star),
-            :false_pos => fp(th_hat, th_star),
-            :false_neg => fn(th_hat, th_star))
+    return Dict(:l2_error  => l2_error(th_hat, th_star),
+                :false_pos => fp(th_hat, th_star),
+                :false_neg => fn(th_hat, th_star))
 end
 
 function avg_evaluate(evaluates)
@@ -155,40 +168,46 @@ n = N[1]
 d = D[1]
 lmbda = 0.85
 
-function run()
-    for n in N
-        for d in D
-            evals_lasso = Float64[]
-            evals_ista = Float64[]
-            @showprogress 1 for i in 1:200
-                cov = 1.0 * Matrix(I,d,d)
-                X = rand(MvNormal(cov),n)
-                e = rand(Normal(0,1.5),n)
-                th_star = vcat([2,2,2,-1.5,-1.5,-1.5,2,2,2,2], zeros(d-10))
-                y = X' * th_star .+ e
-    
-                evs = eigvals(X'X)
-                L = maximum(real(evs))
-                s_0 = 1/L
-                th_0 = zeros(Float64, d)
-                lmbda_0 = lmbda * ones(d)
-    
-                th_hat,l_hat = lla(X, y, th_0, s_0, lmbda_0, n)
-                dist = Normal()
-                link = IdentityLink()
-                X = transpose(X)
-                clf = fit(LassoPath,  X, y, dist, link; α = lmbda)
-                th_lasso = clf.coefs
-                @show size(th_lasso)
-                push!(evals_lasso, evaluate(th_lasso, th_star))
-                push!(evals_ista, evaluate(th_hat, th_star))
-            end
-            println("lasso",n,d,avg_evaluate(evals_lasso))
-            println("ista",n,d,avg_evaluate(evals_ista))
-        end
-    end
-end
+#for n in N
+#    for d in D
+evals_lasso = Float64[]
+evals_ista = Float64[]
+#        for i in 1:200
+i = 1
+cov = 1.0 * Matrix(I,d,d)
+X = rand(MvNormal(cov),n)
+e = rand(Normal(0,1.5),n)
+th_star = vcat([2,2,2,-1.5,-1.5,-1.5,2,2,2,2], zeros(d-10))
+y = X' * th_star .+ e
 
-run()
+evs = eigvals(X'X)
 
+L = maximum(real(evs))
+s_0 = 1/L
+th_0 = zeros(Float64, d)
+lmbda_0 = lmbda * ones(d)
 
+th_hat, l_hat = lla(X, y, th_0, s_0, lmbda_0, n)
+
+dist = Normal()
+
+link = IdentityLink()
+
+Xt = transpose(X)
+clf = fit(LassoPath,  Xt, y, dist, link; α = lmbda)
+
+th_lasso = clf.coefs
+@show size(th_lasso), size(th_star)
+
+evaluate(th_lasso, th_star)
+
+evaluate(th_hat, th_star)
+
+push!(evals_lasso, evaluate(th_lasso, th_star))
+push!(evals_ista, evaluate(th_hat, th_star))
+
+        #end
+        println("lasso",n,d,avg_evaluate(evals_lasso))
+        println("ista",n,d,avg_evaluate(evals_ista))
+#    end
+#end
