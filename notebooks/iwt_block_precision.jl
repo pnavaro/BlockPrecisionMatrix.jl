@@ -3,9 +3,9 @@ using Random, LinearAlgebra, Distributions
 using BenchmarkTools, GLMNet, Plots
 
 # +
-include("src/utils.jl")
-include("src/rotation_matrix.jl")
-include("src/fonctions_simu.jl")
+include("../src/utils.jl")
+include("../src/rotation_matrix.jl")
+include("../src/fonctions_simu.jl")
 p        = 20 
 n        = 500
 b        = 3 
@@ -62,9 +62,10 @@ end
 """
 permute(x :: Array{Float64, 2}, n) = x[randperm(n), :] 
 
-# function returning the fitted values pf regression with the SCAD penalty (used for conditional permutations)
+# function returning the fitted values pf regression with the SCAD penalty 
+# (used for conditional permutations)
 function SCADmod(yvector, x, lambda)
-  regSCAD = ncvreg::ncvreg(x,yvector,penalty=:SCAD,lambda=lambda)
+  regSCAD = ncvreg::ncvreg(x, yvector,penalty=:SCAD,lambda=lambda)
   fitted = cbind(1,x) %*% regSCAD$beta
   return(fitted)
 end
