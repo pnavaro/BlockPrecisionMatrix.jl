@@ -16,14 +16,14 @@ function SCAD(z::Float64, l1::Float64, l2::Float64, gamma::Float64, v::Float64):
      
     s::Float64 = sign(z)
      
-    if (abs(z) <= l1) 
+    if abs(z) <= l1 
         return 0
-    elseif (abs(z) <= (l1*(1+l2)+l1)) 
-        return (s*(abs(z)-l1)/(v*(1+l2)))
-    elseif (abs(z) <= gamma*l1*(1+l2)) 
-        return (s*(abs(z)-gamma*l1/(gamma-1))/(v*(1-1/(gamma-1)+l2)))
+    elseif abs(z) <= (l1*(1+l2)+l1) 
+        return s*(abs(z)-l1)/(v*(1+l2))
+    elseif abs(z) <= gamma*l1*(1+l2)
+        return s*(abs(z)-gamma*l1/(gamma-1))/(v*(1-1/(gamma-1)+l2))
     else 
-        return (z/(v*(1+l2)))
+        return z/(v*(1+l2))
     end
     
 end
@@ -32,22 +32,23 @@ function MCP(z::Float64, l1::Float64, l2::Float64, gamma::Float64, v::Float64)::
     
     s :: Float64 = sign(z)
  
-    if (abs(z) <= l1) 
+    if abs(z) <= l1 
         return 0 
-    elseif (abs(z) <= gamma*l1*(1+l2)) 
-        return (s*(abs(z)-l1)/(v*(1+l2-1/gamma))) 
+    elseif abs(z) <= gamma*l1*(1+l2) 
+        return s*(abs(z)-l1)/(v*(1+l2-1/gamma))
     else 
-        return(z/(v*(1+l2)))
+        return z/(v*(1+l2))
     end
     
 end
 
-function lasso(double z, double l1, double l2, double v)::Float64 
+function lasso( z::Float64, l1::Float64, l2::Float64, v::Float64)::Float64 
 
     s::Float64 = sign(z)
-    if (abs(z) <= l1) return 0 
+    if abs(z) <= l1
+       return 0 
     else 
-       return(s*(fabs(z)-l1)/(v*(1+l2)));
+       return s*(abs(z)-l1)/(v*(1+l2))
     end
 
 end
@@ -56,14 +57,16 @@ end
 """
 Coordinate descent for gaussian models
 """ 
-function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier, alpha, dfmax, user) 
+function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier, alpha, 
+    dfmax, user) 
 
+	violations :: Int64 = 0
 
     n = length(y)
     p = length(X)/n
     L = length(lambda)
   
-    beta = zeros(Float64, L*p)
+    beta = zeros(Float64, (L,p))
     loss = zeros(Float64, L)
     iter = zeros(Int64, L)
   
@@ -98,13 +101,13 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 
             # Assign a
             for j in eachindex(a)
-		       a[j] = b[(l-1)*p+j]
+		       a[j] = b[j,l-1]
             end
 
             # Check dfmax
             nv = 0
             for j in eachinex(a)
-	            (a[j] != 0) && nv += 1
+	            if (a[j] != 0) nv += 1 end
             end
             if ((nv > dfmax) || (tot_iter == max_iter))
                 for ll in 1:L inter[l] = -1 end
@@ -112,12 +115,12 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
             end
 
             # Determine eligible set
-            penalty == "lasso" && cutoff = 2*lam[l] - lam[l-1]
-            penalty == "MCP"   && cutoff = lam[l] + gamma/(gamma-1)*(lam[l] - lam[l-1])
-            penalty == "SCAD"  && cutoff = lam[l] + gamma/(gamma-2)*(lam[l] - lam[l-1])
+            if penalty == :lasso  cutoff = 2*lam[l] - lam[l-1] end
+            if penalty == :MCP    cutoff = lam[l] + gamma/(gamma-1)*(lam[l] - lam[l-1]) end
+            if penalty == :SCAD   cutoff = lam[l] + gamma/(gamma-2)*(lam[l] - lam[l-1]) end
 
             for j in eachindex(z)
-                (abs(z[j]) > (cutoff * alpha * m[j])) && e2[j] = 1
+                if (abs(z[j]) > (cutoff * alpha * m[j])) e2[j] = 1 end
             end
 
         else 
@@ -125,15 +128,15 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
             # Determine eligible set
             lmax = 0
             for j in eachindex(z) 
-                (abs(z[j]) > lmax) && lmax = abs(z[j])
+                if (abs(z[j]) > lmax) lmax = abs(z[j]) end
             end
 
-            penalty == "lasso" && cutoff = 2*lam[l] - lmax;
-            penalty == "MCP"   && cutoff = lam[l] + gamma/(gamma-1)*(lam[l] - lmax)
-            penalty == "SCAD"  && cutoff = lam[l] + gamma/(gamma-2)*(lam[l] - lmax)
+            if penalty == :lasso  cutoff = 2*lam[l] - lmax end
+            if penalty == :MCP    cutoff = lam[l] + gamma/(gamma-1)*(lam[l] - lmax) end
+            if penalty == :SCAD   cutoff = lam[l] + gamma/(gamma-2)*(lam[l] - lmax) end
 
             for j in eachindex(z)
-                (abs(z[j]) > (cutoff * alpha * m[j])) && e2[j] = 1
+                if (abs(z[j]) > (cutoff * alpha * m[j])) e2[j] = 1 end
             end
 
         end
@@ -157,19 +160,19 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 	                        # Update beta_j
 	                        l1 = lam[l] * m[j] * alpha
 	                        l2 = lam[l] * m[j] * (1-alpha)
-	                        penalty == "MCP"   && b[l*p+j] = MCP(z[j], l1, l2, gamma, 1)
-	                        penalty == "SCAD"  && b[l*p+j] = SCAD(z[j], l1, l2, gamma, 1)
-                            penalty == "lasso" && b[l*p+j] = lasso(z[j], l1, l2, 1)
+	                        if penalty == :MCP   b[j,l] = MCP(z[j], l1, l2, gamma, 1) end
+	                        if penalty == :SCAD  b[j,l] = SCAD(z[j], l1, l2, gamma, 1) end
+                            if penalty == :lasso b[j,l] = lasso(z[j], l1, l2, 1) end
 
 	                        #Update r
-	                        shift::Float64 = b[l*p+j] - a[j]
+	                        shift::Float64 = b[j,l] - a[j]
 	                        if (shift !=0) 
 
                                for i in eachindex(r)
-                                   r[i] = r[i] - shift*X[j*n+i]
+                                   r[i] = r[i] - shift*X[i,j]
                                end
 
-                               (abs(shift) > maxChange) && maxChange = abs(shift)
+                               if (abs(shift) > maxChange) maxChange = abs(shift) end
 
                             end
 	                 
@@ -179,7 +182,7 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 
 	                # Check for convergence
 	                for j in eachindex(a)
-                        a[j] = b[l*p+j]
+                        a[j] = b[j,l]
                     end
 
 	                if (maxChange < eps*sdy) break end
@@ -187,7 +190,7 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 	            end
 
 	            # Scan for violations in strong set
-	            violations :: Int64 = 0
+	            violations = 0
 
 	            for j in eachindex(e1)
 
@@ -199,18 +202,18 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 	                    l1 = lam[l] * m[j] * alpha;
 	                    l2 = lam[l] * m[j] * (1-alpha);
 
-	                    penalty == "MCP"    && b[l*p+j] = MCP(z[j], l1, l2, gamma, 1)
-	                    penalty == "SCAD"   && b[l*p+j] = SCAD(z[j], l1, l2, gamma, 1)
-	                    penalty == "lasso"  && b[l*p+j] = lasso(z[j], l1, l2, 1)
+	                    if penalty == :MCP    b[j,l] = MCP(z[j], l1, l2, gamma, 1) end
+	                    if penalty == :SCAD   b[j,l] = SCAD(z[j], l1, l2, gamma, 1) end
+	                    if penalty == :lasso  b[j,l] = lasso(z[j], l1, l2, 1) end
 
 	                    # If something enters the eligible set, update eligible set & residuals
 	                    if (b[l*p+j] !=0)
 
 	                        e1[j] = e2[j] = 1
 	                        for i in eachindex(r) 
-                                r[i] = r[i] - b[l*p+j]*X[j*n+i];
+                                r[i] = r[i] - b[j, l]*X[i, j]
                             end
-	                        a[j] = b[l*p+j];
+	                        a[j] = b[j,l]
 	                        violations += 1
 
 	                    end
@@ -221,7 +224,7 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
             end
 
             # Scan for violations in rest
-            violations :: Int64 = 0;
+            violations  = 0
 
             for j in eachindex(e2)
 
@@ -233,24 +236,28 @@ function cdfit_gaussian( X, y, penalty, lambda, eps, max_iter, gamma, multiplier
 	                l1 = lam[l] * m[j] * alpha;
 	                l2 = lam[l] * m[j] * (1-alpha);
 
-	                penalty == "MCP"    && b[l*p+j] = MCP(z[j], l1, l2, gamma, 1);
-	                penalty == "SCAD"   && b[l*p+j] = SCAD(z[j], l1, l2, gamma, 1);
-	                penalty == "lasso"  && b[l*p+j] = lasso(z[j], l1, l2, 1);
+	                if penalty == :MCP    b[j,l] = MCP(z[j], l1, l2, gamma, 1) end
+	                if penalty == :SCAD   b[j,l] = SCAD(z[j], l1, l2, gamma, 1) end
+	                if penalty == :lasso  b[j,l] = lasso(z[j], l1, l2, 1) end
 
 	                # If something enters the eligible set, update eligible set & residuals
 
-	                if (b[l*p+j] !=0) 
+	                if (b[j,l] !=0) 
 
-	                    e1[j] = e2[j] = 1;
-	                    for (int i=0; i<n; i++) r[i] -= b[l*p+j]*X[j*n+i];
-	                    a[j] = b[l*p+j];
-	                    violations++;
+	                    e1[j] = e2[j] = 1
+	                    for i in eachindex(r)
+                            r[i] -= b[j,l] * X[i, j]
+                        end
+	                    a[j] = b[j,l]
+	                    violations += 1
 
 	                end
                 end
             end
 
-            if (violations==0) break end
+            if violations==0 
+               break
+            end
           
         end
 
