@@ -1,6 +1,7 @@
 ncol( A::AbstractMatrix ) = size(A)[2]
 
-function standardize(X)
+function mystd(X)
+
     # Declarations
     n, p = size(X)
 
@@ -34,103 +35,67 @@ function standardize(X)
 
     XX, c, s
 
-end
-
-function std(X)
-
-    STD, center, scale = standardize(X)
-
-    ns = find(STD .> 1e-6)
+    ns = find(XX .> 1e-6)
 
     if length(ns) == ncol(X)
-      val = STD
+      val = XX
     else 
-      val = STD[:, ns]
+      val = XX[:, ns]
     end
 
-    (center=c, scale=s, nonsingular=ns)
+    (val = val, center=c, scale=s, nonsingular=ns)
 
 end
 
 
-function ncvreg (X, y, lambda ) 
+function ncvreg(X, y, lambda ) 
 
-  family         = "gaussian"
-  penalty        = "SCAD"
-  gamma          = switch(penalty, SCAD=3.7, 3)
-  alpha          = 1 
-  lambda.min     = ifelse( n>p, 001, .05)
-  nlambda        = 100
-  eps            = 1e-4
-  max.iter       = 10000
-  convex         = true 
-  dfmax          = p+1 
-  penalty.factor = ones(Float64, size(X)[2])
-  warn           = true
+    family         = "gaussian"
+    penalty        = "SCAD"
+    gamma          = switch(penalty, SCAD=3.7, 3)
+    alpha          = 1 
+    lambda.min     = ifelse( n>p, 001, .05)
+    nlambda        = 100
+    eps            = 1e-4
+    max_iter       = 10000
+    convex         = true 
+    dfmax          = p+1 
+    penalty_factor = ones(Float64, size(X)[2])
+    warn           = true
 
+    ## Set up XX, yy, lambda
+    XX  = mystd(X)["val"]
+    p   = size(XX)[2]
 
-  ## Set up XX, yy, lambda
-  XX  = std(X)
-  p   = size(XX)[2]
+    yy  = y .- mean(y)
 
-  yy  = y .- mean(y)
+    n   = length(yy)
 
-  n   = length(yy)
+    nlambda = length(lambda)
+    user_lambda = true
+    
+    beta, loss, iter = cdfit_gaussian(XX, yy, penalty, lambda, eps, max_iter, gamma, 
+        penalty_factor, alpha, dfmax, user_lambda )
 
+    a = repeat(mean(y),nlambda)
+    b = matrix(beta, p, nlambda)
 
-  nlambda = length(lambda)
-  user.lambda = true
-  
-  beta, loss, iter = cdfit_gaussian(XX, yy, penalty, lambda, eps, as.integer(max.iter), as.double(gamma), 
-      penalty.factor, alpha, as.integer(dfmax), user.lambda )
+    ## Eliminate saturated lambda values, if any
+    ind     = (iter .> 0)
+    a      .= a[ind]
+    b      .= b[ :, ind]
+    iter   .= iter[ind]
+    lambda .= lambda[ind]
+    loss   .= loss[ind]
 
-  a = repeat(mean(y),nlambda)
-  b = matrix(beta, p, nlambda)
+    if (warn && sum(iter) == max.iter) @warn "Maximum number of iterations reached" end
 
-  ## Eliminate saturated lambda values, if any
-  ind     = (iter .> 0)
-  a      .= a[ind]
-  b      .= b[ :, ind]
-  iter   .= iter[ind]
-  lambda .= lambda[ind]
-  loss   .= loss[ind]
+    ## Unstandardize
+    beta = zeros(Float64, ((ncol(X)+1), length(lambda)))
+    bb   = b ./ XX.scale[ns]
+    beta[ns+1,] .= bb
+    beta[1,:] .= a .- cross(XX.center[ns], bb)
 
-  if (family=="binomial") Eta .= Eta[:,ind] end
-  if (warn && sum(iter) == max.iter) @warn "Maximum number of iterations reached"
-
-  ## Local convexity?
-  if convex
-      convex.min = convexMin(b, XX, penalty, gamma, lambda*(1-alpha), family, penalty.factor, a=a) 
-  else 
-      convex.min = nothing
-  end
-
-  ## Unstandardize
-  beta = zeros(Float64, ((ncol(X)+1), length(lambda)))
-  bb   = b / attr(XX, "scale")[ns]
-  beta[ns+1,] <- bb
-  beta[1,] <- a - crossprod(attr(XX, "center")[ns], bb)
-
-  ## Names
-  varnames <- if (is.null(colnames(X))) paste("V",1:ncol(X),sep="") else colnames(X)
-  varnames <- c("(Intercept)", varnames)
-  dimnames(beta) <- list(varnames, lamNames(lambda))
-
-  ## Output
-  val <- structure(list(beta = beta,
-                        iter = iter,
-                        lambda = lambda,
-                        penalty = penalty,
-                        family = family,
-                        gamma = gamma,
-                        alpha = alpha,
-                        convex.min = convex.min,
-                        loss = loss,
-                        penalty.factor = penalty.factor,
-                        n = n),
-                   class = "ncvreg")
-  
-  
-    XX, yy
+    beta
 
 end
