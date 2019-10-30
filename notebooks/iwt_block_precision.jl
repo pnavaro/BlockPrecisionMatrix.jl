@@ -46,15 +46,18 @@ nblocks = length(levels(CategoricalArray(blocks)))
 
 # -
 
+"""
+    stat_test(block1_perm, block2, data_orig, points_x, points_y)
+
+We use the Xia estimator for the precision matrix
+"""
 function stat_test(block1_perm, block2, 
         data_orig, points_x, points_y)
     
     data.orig[:, points_x] .= block1_perm
     Tprec, TprecStd = prec_xia(data_orig)
-    #Rhohat = cor(block1,block2,method='pearson')
-    #Rohat.std = Rhohat^2/(1-Rhohat^2)
     submat = TprecStd[points_x, points_y]
-    return sum(submat).^2 # We use the Xia estimator for the precision matrix
+    return sum(submat).^2 
 end
 
 """ Permutation test:
@@ -62,26 +65,42 @@ end
 """
 permute(x :: Array{Float64, 2}, n) = x[randperm(n), :] 
 
-# function returning the fitted values pf regression with the SCAD penalty 
-# (used for conditional permutations)
-function SCADmod(yvector, x, lambda)
-  regSCAD = ncvreg::ncvreg(x, yvector,penalty=:SCAD,lambda=lambda)
-  fitted = cbind(1,x) %*% regSCAD$beta
-  return(fitted)
+include("../src/gaussian.jl")
+include("../src/ncvreg.jl")
+
+# +
+"""
+    function SCADmod(yvector, x, lambda)
+
+function returning the fitted values pf regression with 
+the SCAD penalty (used for conditional permutations)
+"""
+function scad_mod(yvector, x, lambda)
+  beta = ncvreg(x, yvector, penalty=:SCAD, lambda=lambda)
+    
+  n = size(x)[2]
+  
+  fitted = hcat(ones(n),x) .* beta
+    
+  return fitted
+
 end
+# -
 
 """
-# uses SCAD/OLS
-    permutation = randperm(n)
+    permute_conditional(y, n, data_complement, estimation)
+
+uses SCAD/OLS
+
 """
 function permute_conditional(y, n, data_complement, estimation)
     # SCAD/OLS estimaytion
     if extimation == :LM
-        fitted = lm.fit(cbind(1,data_complement),y)$fitted
+        #fitted = lm.fit(cbind(1,data_complement),y)$fitted
     elseif estimation == :SCAD
-        nrows, ncols =. size(data_complement)
-        λ=2*sqrt(var(y[:,1])*log(ncols)/nrows)))
-        SCAD=apply(y,2,SCADmod, x=data_complement, lambda=λ)
+        nrows, ncols = size(data_complement)
+        λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)))
+        SCAD = [scad_mod(v, data_complement,λ) for v in eachcol(y)]
     end    
 
     residuals = y .- fitted
