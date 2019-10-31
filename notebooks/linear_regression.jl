@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -13,61 +14,68 @@
 #     name: julia-1.2
 # ---
 
-0.1 * randn(10)
+using GLM, LinearAlgebra, Plots, Random, Statistics
+
+# # Prepare data
 
 # +
-using Random, Plots
+rng = MersenneTwister(0)
+n, p = 10, 1
+X = randn(rng, (n, p))
+b = randn(rng, p) 
+y = 0.1*randn(rng, n) .+  X * b
 
-n = 20
-X = rand(n,1)
-y = 1 .+ 2 .* X[:,1] + 0.2 .* randn(n)
+xmin, xmax = extrema(X[:,1])
+npoints = 100
+x = LinRange(xmin, xmax, npoints)
+# -
+
+# # Linear regression with obvious version
+
 XX = hcat(ones(n), X)
 beta = inv(XX'XX) * XX'y
 scatter( X[:,1], y)
-x = LinRange(0,1,100)
-plot!(x, hcat(ones(100),x) * beta)
-# -
+plot!(x, hcat(ones(npoints),x) * beta)
 
+# # Version with QR factorisation
+# The `\` operator is the short-hand for
+# ```julia
+# Q, R = qr(X)
+# β = inv(factorize(R)) * Q.'y
+# ```
 
+XX = hcat(ones(n), X)
+beta = XX \ y
 
-pl
+plot!(x, hcat(ones(npoints),x) * beta)
+
+# # Version with singular values decomposition
+
+# ```jl
+# β = pinv(X) * y
+# ```
+#
+# means
+#
+# ```jl
+# U, S, V = svd(X)
+# β = V * diagm(1 ./ S) * U.' * y
+# ```
+
+XX = hcat(ones(n), X)
+beta = pinv(XX) * y
+scatter( X[:,1], y)
+plot!(x, hcat(ones(npoints),x) * beta)
+# ## With GLM.jl
+
+U, S, V = svd(XX)
+β = V * diagm(1 ./ S) * U' * y
 
 # +
+using GLM
 
-n, p = size(x)
-vec(model.beta * vcat(ones(n), x)')
+fitted = lm(XX, y)
 # -
 
-
-
-
-
-using GLM, RDatasets
-
-form = dataset("datasets", "Formaldehyde")
-
-lm1 = fit(LinearModel, @formula(OptDen ~ Carb), form)
-
-lm1.model
-
-predict(lm1, Table(LinRange(0.1,0.9,100)))
-
-Table
-
-typeof(form.Carb)
-
-using Random
-blocks = shuffle(4:8)
-index_y = collect(1:10)
-
-blocks in index_y
-
-prostate = dataset("datasets", "Prostate")
-
-
-
-
-
-
-
-
+scatter( X[:,1], y)
+plot!(x, predict(fitted, hcat(ones(npoints),x)))
