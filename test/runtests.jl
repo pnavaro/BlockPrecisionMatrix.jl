@@ -1,17 +1,8 @@
-using Test, LinearAlgebra
+using LinearAlgebra
+using Random
+using Statistics
+using Test
 
-@testset "random rotation matrix" begin
-
-    import PrecisionMatrix: RotationMatrix
-    
-    for p in 1:17
-    
-        P = RotationMatrix(p)
-        @show p
-        @test P' * P ≈ diagm(ones(p)) 
-        @test P * P' ≈ diagm(ones(p)) 
-        @test det(P) ≈ 1.0
-    
-    end
-
-end
+include("test_gaussian.jl")
+include("test_std.jl")
+include("test_rotation_matrix.jl")
