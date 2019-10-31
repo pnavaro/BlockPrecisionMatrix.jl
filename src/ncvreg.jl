@@ -1,5 +1,7 @@
 ncol( A::AbstractMatrix ) = size(A)[2]
 
+export mystd
+
 function mystd(X)
 
     # Declarations
@@ -35,15 +37,14 @@ function mystd(X)
 
     XX, c, s
 
-    ns = find(XX .> 1e-6)
+    ns = findall(s .> 1e-6)
 
-    if length(ns) == ncol(X)
-      val = XX
+    if length(ns) == length(s)
+      (values = XX, center=c, scale=s, nonsingular=ns)
     else 
-      val = XX[:, ns]
+      (values = XX[:,ns], center=c, scale=s, nonsingular=ns)
     end
 
-    (val = val, center=c, scale=s, nonsingular=ns)
 
 end
 
@@ -52,9 +53,9 @@ function ncvreg(X, y, lambda )
 
     family         = "gaussian"
     penalty        = "SCAD"
-    gamma          = switch(penalty, SCAD=3.7, 3)
+    gamma          = 3.7
     alpha          = 1 
-    lambda.min     = ifelse( n>p, 001, .05)
+    lambda.min     = ifelse( n>p, 0.001, .05)
     nlambda        = 100
     eps            = 1e-4
     max_iter       = 10000
