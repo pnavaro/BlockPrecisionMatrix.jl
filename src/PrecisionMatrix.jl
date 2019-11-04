@@ -1,6 +1,5 @@
 module PrecisionMatrix
 
-include("gaussian.jl")
 include("ncvreg.jl")
 include("rotation_matrix.jl")
 include("fonctions_simu.jl")
