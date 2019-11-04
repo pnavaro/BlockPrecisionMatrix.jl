@@ -1,25 +1,45 @@
 @testset "ncvreg works for linear regression" begin
 
-using DataFrames, GLM
+using LinearAlgebra
+using Random
+
 import PrecisionMatrix: ncvreg
 
-n = 50
-p = 10
-X = randn(n,p)
-b = randn(p)
-y = randn(n) .+  X * b
+using MultivariateStats
 
-df = DataFrame( X = X, y = y)
+n = 1000
+p = 3
+# prepare data
+X = rand(n, p)                  # feature matrix
+a0 = rand(p)                    # ground truths
+y = X * a0 + 0.1 * randn(n)     # generate response
 
-ols = lm(@formula(y ~ X), df)
+# solve using llsq
+a = llsq(X, y; bias=false)
 
-@show ols
+# do prediction
+yp = X * a
 
-#scad = ncvreg(X,y,lambda=0,penalty=:SCAD,eps=.0001)
+# measure the error
+rmse = sqrt(mean(abs2.(y .- yp)))
+println("LLSQ rmse = $rmse")
 
-@test true
+# solve using linear regression
+XX = hcat(ones(n), X)
+beta = pinv(XX) * y
 
-#mcp  = ncvreg(X,y,lambda=0,penalty=:MCP,eps=.0001)
+# do prediction
+yp = XX * beta 
+
+rmse = sqrt(mean(abs2.(y .- yp)))
+println("LM rmse = $rmse")
+
+scad = ncvreg(X, y, zeros(Float64, n))
+
+yp = XX * scad 
+
+rmse = sqrt(mean(abs2.(y .- yp)))
+println("SCAD rmse = $rmse")
 
 @test true
 
