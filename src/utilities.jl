@@ -41,3 +41,15 @@ stat.test = function(block1.perm,block2,data.orig,points.x,points.y){
   return(sum(submat)^2) # We use the Xia estimator for the precision matrix
 }
 
+export rmse
+
+"""
+    rmse(a, b)
+
+Compute the Root Mean Square Error between 2 vectors.
+"""
+function rmse(a, b)
+
+    sqrt(mean((a .- b).^2))
+
+end
