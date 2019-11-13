@@ -16,7 +16,6 @@ y = X * a0 + 0.1 * randn(n)     # generate response
 
 # solve using llsq
 a = llsq(X, y; bias=false)
-@show a
 
 # do prediction
 yp = X * a
@@ -28,9 +27,7 @@ println("LLSQ rmse = $rmse")
 # solve using linear regression
 XX = hcat(ones(n), X)
 
-
 beta = pinv(XX) * y
-@show beta
 
 # do prediction
 yp = XX * beta 
@@ -41,8 +38,6 @@ println("LM rmse = $rmse")
 λ = [0.0]
 scad = ncvreg(X, y, λ)
 
-@show scad
-
 yp = XX * scad 
 
 rmse = sqrt(mean(abs2.(y .- yp)))
@@ -51,4 +46,3 @@ println("SCAD rmse = $rmse")
 @test true
 
 end
-
