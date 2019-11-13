@@ -361,7 +361,7 @@ function ncvreg(X, y, λ )
 
     ## Unstandardize
     b = β ./ scale
-    a = [mean(y) for i in 1:nλ] .- center' * b
+    a = [mean(y) for i in 1:nλ] .- vec(center' * b)
 
     transpose(collect(hcat(a, b')))
 
