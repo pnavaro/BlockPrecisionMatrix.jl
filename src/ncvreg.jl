@@ -116,10 +116,12 @@ end
     cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, multiplier, α, dfmax) 
 
 Coordinate descent for gaussian models
+
+reference : https://github.com/pbreheny/ncvreg/blob/master/src/gaussian.c
 """ 
 function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax) 
 
-	violations :: Int64 = 0
+    violations :: Int64 = 0
 
     n, p = size(X)
     @assert n == length(y)
@@ -154,7 +156,7 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
     # Path
     for l in lstart:L
 
-        if l != 1 
+        if l > 1 
 
             # Assign a
             for j in eachindex(a)
@@ -171,9 +173,8 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
                 break
             end
 
-
             # Determine eligible set
-            penalty == :lasso  && (cutoff = 2*λ[l] - lam[l-1])
+            penalty == :Lasso  && (cutoff = 2*λ[l] - lam[l-1])
             penalty == :MCP    && (cutoff = λ[l] + γ/(γ-1)*(λ[l] - λ[l-1]))
             penalty == :SCAD   && (cutoff = λ[l] + γ/(γ-2)*(λ[l] - λ[l-1]))
 
@@ -189,7 +190,7 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
                 if (abs(z[j]) > lmax) lmax = abs(z[j]) end
             end
 
-            penalty == :lasso && ( cutoff = 2*λ[l] - lmax )
+            penalty == :Lasso && ( cutoff = 2*λ[l] - lmax )
             penalty == :MCP   && ( cutoff = λ[l] + γ/(γ-1)*(λ[l] - lmax) )
             penalty == :SCAD  && ( cutoff = λ[l] + γ/(γ-2)*(λ[l] - lmax) )
 
@@ -201,32 +202,32 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 
         while (tot_iter < max_iter) 
             while (tot_iter < max_iter) 
-	            while (tot_iter < max_iter)
+	        while (tot_iter < max_iter)
 
-	                # Solve over the active set
+	            # Solve over the active set
 
-	                iter[l]  += 1
+	            iter[l]  += 1
                     tot_iter +=1 
                     maxChange::Float64 = 0
 
-	                for j in eachindex(z)
+	            for j in eachindex(z)
 
-	                    if e1[j]
+	                if e1[j]
 
-                            z[j] = crossprod(X, r, j) / n + a[j]
+                           z[j] = crossprod(X, r, j) / n + a[j]
 
-	                        # Update β_j
-	                        l1 = λ[l] * m[j] * α
-	                        l2 = λ[l] * m[j] * (1-α)
+	                   # Update β_j
+	                   l1 = λ[l] * m[j] * α
+	                   l2 = λ[l] * m[j] * (1-α)
 
-	                        penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
-	                        penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
-                                penalty == :lasso && (β[j,l] = lasso(z[j], l1, l2))
+                           penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
+                           penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
+                           penalty == :Lasso && (β[j,l] = lasso(z[j], l1, l2))
 
-	                        #Update r
-	                        shift::Float64 = β[j,l] - a[j]
+                           #Update r
+                           shift::Float64 = β[j,l] - a[j]
 
-	                        if shift !=0
+                           if shift !=0
 
                                for i in eachindex(r)
                                    r[i] = r[i] - shift * X[i,j]
@@ -234,53 +235,54 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 
                                (abs(shift) > maxChange) && (maxChange = abs(shift))
 
-                            end
-	                 
-	                    end
+                           end
+                          
+                        end
 
                     end
 
-	                # Check for convergence
-	                for j in eachindex(a)
+                    # Check for convergence
+                    for j in eachindex(a)
                         a[j] = β[j,l]
                     end
 
-	                (maxChange < eps*sdy) && break
+                    (maxChange < eps*sdy) && break
 
-	            end
+                end
 
-	            # Scan for violations in strong set
-	            violations = 0
+                # Scan for violations in strong set
+                violations = 0
 
-	            for j in eachindex(e1)
+                for j in eachindex(e1)
 
-	                if !e1[j] && e2[j]
+                    if !e1[j] && e2[j]
 
-	                    z[j] = crossprod(X, r, j) / n
+                        z[j] = crossprod(X, r, j) / n
 
-	                    # Update β_j
-	                    l1 = λ[l] * m[j] * α
-	                    l2 = λ[l] * m[j] * (1-α)
+                        # Update β_j
+                        l1 = λ[l] * m[j] * α
+                        l2 = λ[l] * m[j] * (1-α)
 
-	                    penalty == :MCP    && (β[j,l] = mcp(z[j], l1, l2, γ))
-	                    penalty == :SCAD   && (β[j,l] = scad(z[j], l1, l2, γ))
-	                    penalty == :lasso  && (β[j,l] = lasso(z[j], l1, l2))
+                        penalty == :MCP    && (β[j,l] = mcp(z[j], l1, l2, γ))
+                        penalty == :SCAD   && (β[j,l] = scad(z[j], l1, l2, γ))
+                        penalty == :Lasso  && (β[j,l] = lasso(z[j], l1, l2))
 
-	                    # If something enters the eligible set, update eligible set & residuals
-	                    if (β[j,l] !=0)
+                        # If something enters the eligible set, 
+                        # update eligible set & residuals
+                        if (β[j,l] !=0)
 
-	                        e1[j] = e2[j] = true
-	                        for i in eachindex(r) 
+                            e1[j] = e2[j] = true
+                            for i in eachindex(r) 
                                 r[i] = r[i] - β[j,l]*X[i, j]
                             end
-	                        a[j] = β[j,l]
-	                        violations += 1
+                            a[j] = β[j,l]
+                            violations += 1
 
-	                    end
-	                end 
+                        end
+                    end 
                 end
-	    
-	            violations==0 && break
+   
+                violations==0 && break
 
             end
 
@@ -289,86 +291,110 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 
             for j in eachindex(e2)
 
-	            if (e2[j]==0)
+                if (e2[j]==0)
 
-	                z[j] = crossprod(X, r, j)/n
+                    z[j] = crossprod(X, r, j)/n
 
-	                # Update β_j
-	                l1 = λ[l] * m[j] * α
-	                l2 = λ[l] * m[j] * (1-α)
+	            # Update β_j
+	            l1 = λ[l] * m[j] * α
+	            l2 = λ[l] * m[j] * (1-α)
 
-	                penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
-	                penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
-	                penalty == :lasso && (β[j,l] = lasso(z[j], l1, l2))
+	            penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
+	            penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
+	            penalty == :Lasso && (β[j,l] = lasso(z[j], l1, l2))
 
-	                # If something enters the eligible set, update eligible set & residuals
+	            # If something enters the eligible set, update eligible set & residuals
 
-	                if (b[j,l] !=0) 
+	            if (b[j,l] !=0) 
 
-	                    e1[j] = e2[j] = true
-	                    for i in eachindex(r)
+	                e1[j] = e2[j] = true
+	                for i in eachindex(r)
                             r[i] -= b[j,l] * X[i, j]
                         end
-	                    a[j] = b[j,l]
-	                    violations += 1
+	                a[j] = b[j,l]
+	                violations += 1
 
-	                end
+	            end
                 end
             end
 
             if violations==0 
-               break
+                break
             end
           
         end
 
         loss[l] = gaussian_loss(r)
+
     end 
   
     β, loss, iter
 
 end
 
-export NCVREG
+abstract type NCVREG end
 
-struct NCVREG
+export SCAD
+struct SCAD <: NCVREG
 
     beta :: Array{Float64, 2}
 
-    function NCVREG(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64} ) 
-        penalty        = :SCAD
-        γ              = 3.7
-        α              = 1 
-        eps            = 1e-4
-        max_iter       = 10000
-        convex         = true 
-        n, p           = size(X)
-        penalty_factor = ones(Float64, p)
-    
-        ## Set up XX, yy, λ
-        XX, center, scale = mystd(X)
-        dfmax = p+1 
-    
-        yy  = y .- mean(y)
-    
-        @assert n == length(yy)
-    
-        λ_min = ifelse( n>p, 0.001, .05)
-    
-        nλ = length(λ)
-        
-        β, loss, iter = cdfit_gaussian(XX, yy, penalty, λ, eps, max_iter, γ, 
-            penalty_factor, α, dfmax )
-    
-        ## Unstandardize
-        b = β ./ scale
-        a = [mean(y) for i in 1:nλ] .- vec(center' * b)
-    
-        beta = zeros(Float64, (ncol(X)+1, p))
-        beta .= transpose(collect(hcat(a, b')))
-
-        new( beta )
-    
+    function SCAD(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64})
+        new( ncvreg(X, y, λ, :SCAD, 3.7 )) 
     end
+end
+
+export MCP
+struct MCP <: NCVREG
+
+    beta :: Array{Float64, 2}
+
+    function MCP(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64}) 
+        new( ncvreg(X, y, λ, :MCP, 3. ))
+    end
+end
+
+export Lasso
+struct Lasso <: NCVREG
+
+    beta :: Array{Float64, 2}
+
+    function Lasso(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64} ) 
+        new( ncvreg(X, y, λ, :Lasso, 3. )) 
+    end
+end
+
+function ncvreg(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64}, penalty, γ ) 
+
+    α              = 1 
+    eps            = 1e-4
+    max_iter       = 10000
+    n, p           = size(X)
+    penalty_factor = ones(Float64, p)
+
+    ## Set up XX, yy, λ
+    XX, center, scale = mystd(X)
+    dfmax = p+1 
+
+    yy  = y .- mean(y)
+
+    @assert n == length(yy)
+    @assert penalty in [:SCAD, :MCP, :Lasso]
+
+    λ_min = ifelse( n>p, 0.001, .05)
+
+    nλ = length(λ)
+    
+    β, loss, iter = cdfit_gaussian(XX, yy, penalty, λ, eps, max_iter, γ, 
+        penalty_factor, α, dfmax )
+
+    ## Unstandardize
+    b = β ./ scale
+    a = [mean(y) for i in 1:nλ] .- vec(center' * b)
+
+    beta = zeros(Float64, (ncol(X)+1, p))
+    beta .= transpose(collect(hcat(a, b')))
+
+    beta
 
 end
