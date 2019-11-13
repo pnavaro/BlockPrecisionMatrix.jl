@@ -23,7 +23,7 @@
     println("LM rmse = $rmse")
     
     λ = [0.0]
-    scad = NCVREG(X, y, λ)
+    scad = SCAD(X, y, λ)
     
     @test maximum(abs.(beta .- scad.beta)) < 2e-5
     
@@ -32,5 +32,22 @@
     rmse = sqrt(mean(abs2.(y .- yp)))
     println("SCAD rmse = $rmse")
 
+    mcp = MCP(X, y, λ)
+    
+    @test maximum(abs.(beta .- mcp.beta)) < 2e-5
+    
+    yp = XX * mcp.beta 
+    
+    rmse = sqrt(mean(abs2.(y .- yp)))
+    println("MCP rmse = $rmse")
+
+    lasso = Lasso(X, y, λ)
+    
+    @test maximum(abs.(beta .- lasso.beta)) < 2e-5
+    
+    yp = XX * lasso.beta 
+    
+    rmse = sqrt(mean(abs2.(y .- yp)))
+    println("Lasso rmse = $rmse")
 
 end
