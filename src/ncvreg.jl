@@ -1,7 +1,5 @@
 ncol( A::AbstractMatrix ) = size(A)[2]
 
-export mystd
-
 function mystd(X)
 
     # Declarations
@@ -55,7 +53,7 @@ function gaussian_loss( r :: Vector{Float64})::Float64
     l
 end 
 
-function SCAD(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
+function scad(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
      
     s::Float64 = sign(z)
      
@@ -71,7 +69,7 @@ function SCAD(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
     
 end
 
-function MCP(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
+function mcp(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
     
     s :: Float64 = sign(z)
  
@@ -221,9 +219,9 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 	                        l1 = λ[l] * m[j] * α
 	                        l2 = λ[l] * m[j] * (1-α)
 
-	                        penalty == :MCP   && (β[j,l] = MCP(z[j], l1, l2, γ))
-	                        penalty == :SCAD  && (β[j,l] = SCAD(z[j], l1, l2, γ))
-                            penalty == :lasso && (β[j,l] = lasso(z[j], l1, l2))
+	                        penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
+	                        penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
+                                penalty == :lasso && (β[j,l] = lasso(z[j], l1, l2))
 
 	                        #Update r
 	                        shift::Float64 = β[j,l] - a[j]
@@ -264,8 +262,8 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 	                    l1 = λ[l] * m[j] * α
 	                    l2 = λ[l] * m[j] * (1-α)
 
-	                    penalty == :MCP    && (β[j,l] = MCP(z[j], l1, l2, γ))
-	                    penalty == :SCAD   && (β[j,l] = SCAD(z[j], l1, l2, γ))
+	                    penalty == :MCP    && (β[j,l] = mcp(z[j], l1, l2, γ))
+	                    penalty == :SCAD   && (β[j,l] = scad(z[j], l1, l2, γ))
 	                    penalty == :lasso  && (β[j,l] = lasso(z[j], l1, l2))
 
 	                    # If something enters the eligible set, update eligible set & residuals
@@ -299,8 +297,8 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 	                l1 = λ[l] * m[j] * α
 	                l2 = λ[l] * m[j] * (1-α)
 
-	                penalty == :MCP   && (β[j,l] = MCP(z[j], l1, l2, γ))
-	                penalty == :SCAD  && (β[j,l] = SCAD(z[j], l1, l2, γ))
+	                penalty == :MCP   && (β[j,l] = mcp(z[j], l1, l2, γ))
+	                penalty == :SCAD  && (β[j,l] = scad(z[j], l1, l2, γ))
 	                penalty == :lasso && (β[j,l] = lasso(z[j], l1, l2))
 
 	                # If something enters the eligible set, update eligible set & residuals
@@ -331,38 +329,97 @@ function cdfit_gaussian( X, y, penalty, λ, eps, max_iter, γ, m, α, dfmax)
 
 end
 
-export nvcreg
+export NCVREG
 
-function ncvreg(X, y, λ ) 
+struct NCVREG
 
-    penalty        = :SCAD
-    γ              = 3.7
-    α              = 1 
-    eps            = 1e-4
-    max_iter       = 10000
-    convex         = true 
-    n, p           = size(X)
-    penalty_factor = ones(Float64, p)
+    beta :: Array{Float64, 2}
 
-    ## Set up XX, yy, λ
-    XX, center, scale = mystd(X)
-    dfmax = p+1 
-
-    yy  = y .- mean(y)
-
-    @assert n == length(yy)
-
-    λ_min = ifelse( n>p, 0.001, .05)
-
-    nλ = length(λ)
+    function NCVREG(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64} ) 
+        penalty        = :SCAD
+        γ              = 3.7
+        α              = 1 
+        eps            = 1e-4
+        max_iter       = 10000
+        convex         = true 
+        n, p           = size(X)
+        penalty_factor = ones(Float64, p)
     
-    β, loss, iter = cdfit_gaussian(XX, yy, penalty, λ, eps, max_iter, γ, 
-        penalty_factor, α, dfmax )
+        ## Set up XX, yy, λ
+        XX, center, scale = mystd(X)
+        dfmax = p+1 
+    
+        yy  = y .- mean(y)
+    
+        @assert n == length(yy)
+    
+        λ_min = ifelse( n>p, 0.001, .05)
+    
+        nλ = length(λ)
+        
+        β, loss, iter = cdfit_gaussian(XX, yy, penalty, λ, eps, max_iter, γ, 
+            penalty_factor, α, dfmax )
+    
+        ## Unstandardize
+        b = β ./ scale
+        a = [mean(y) for i in 1:nλ] .- vec(center' * b)
+    
+        beta = zeros(Float64, (ncol(X)+1, p))
+        beta .= transpose(collect(hcat(a, b')))
 
-    ## Unstandardize
-    b = β ./ scale
-    a = [mean(y) for i in 1:nλ] .- vec(center' * b)
-
-    transpose(collect(hcat(a, b')))
+        new( beta )
+    
+    end
 
 end
+
+#=
+function coef( ncvreg :: NCVREG, lambda, which=1:length(object$lambda), drop=TRUE, ...) {
+  if (!missing(lambda)) {
+    if (max(lambda) > max(object$lambda) | min(lambda) < min(object$lambda)) {
+      stop('Supplied lambda value(s) are outside the range of the model fit.')
+    }
+    ind <- approx(object$lambda,seq(object$lambda),lambda)$y
+    l <- floor(ind)
+    r <- ceiling(ind)
+    w <- ind %% 1
+    beta <- (1-w)*object$beta[,l,drop=FALSE] + w*object$beta[,r,drop=FALSE]
+    colnames(beta) <- lamNames(lambda)
+  }
+  else beta <- object$beta[, which, drop=FALSE]
+  if (drop) return(drop(beta)) else return(beta)
+end
+
+
+function predict(ncvreg :: NCVREG, X, type)
+
+
+=c("link", "response", "class", "coefficients", "vars", "nvars"),
+                           lambda, which=1:length(object$lambda), ...) {
+  type <- match.arg(type)
+  beta <- coef.ncvreg(object, lambda=lambda, which=which, drop=FALSE)
+  if (type=="coefficients") return(beta)
+  if (class(object)[1]=='ncvreg') {
+    alpha <- beta[1,]
+    beta <- beta[-1,,drop=FALSE]
+  } else {
+    beta <- beta
+  }
+
+  if (type=="nvars") return(apply(beta!=0,2,sum))
+  if (type=="vars") return(drop(apply(beta!=0, 2, FUN=which)))
+  eta <- sweep(X %*% beta, 2, alpha, "+")
+  if (type=="link" || object$family=="gaussian") return(drop(eta))
+  resp <- switch(object$family,
+                 binomial = exp(eta)/(1+exp(eta)),
+                 poisson = exp(eta))
+  if (type=="response") return(drop(resp))
+  if (type=="class") {
+    if (object$family=="binomial") {
+      return(drop(1*(eta>0)))
+    } else {
+      stop("type='class' can only be used with family='binomial'")
+    }
+  }
+end 
+=#
