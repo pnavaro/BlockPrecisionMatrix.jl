@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 using Random, LinearAlgebra, Distributions
-using BenchmarkTools, GLMNet, Plots
+using BenchmarkTools, GLMNet, Plots, StatsBase
+
+include("../src/PrecisionMatrix.jl")
+
 
 # +
-include("../src/utils.jl")
-include("../src/rotation_matrix.jl")
-include("../src/fonctions_simu.jl")
 p        = 20 
 n        = 500
 b        = 3 
 blocsOn  = [[1,3]]
-resBlocs = structure_cov(p, b, blocsOn, seed = 42)
+resBlocs = PrecisionMatrix.structure_cov(p, b, blocsOn, seed = 42)
 resBlocs[:blocs]
 
 D        = rand(Uniform(1e-4, 1e-2), p)
-resmat   = cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
+resmat   = PrecisionMatrix.cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
                    blocsOn, D)
 # -
 
@@ -65,9 +65,6 @@ end
 """
 permute(x :: Array{Float64, 2}, n) = x[randperm(n), :] 
 
-include("../src/gaussian.jl")
-include("../src/ncvreg.jl")
-
 # +
 """
     function SCADmod(yvector, x, lambda)
@@ -76,7 +73,7 @@ function returning the fitted values pf regression with
 the SCAD penalty (used for conditional permutations)
 """
 function scad_mod(yvector, x, lambda)
-  beta = ncvreg(x, yvector, penalty=:SCAD, lambda=lambda)
+  beta = PrecisionMatrix.ncvreg(x, yvector, penalty=:SCAD, lambda=lambda)
     
   n = size(x)[2]
   
@@ -94,12 +91,12 @@ uses SCAD/OLS
 
 """
 function permute_conditional(y, n, data_complement, estimation)
-    # SCAD/OLS estimaytion
+    # SCAD/OLS estimation
     if extimation == :LM
         #fitted = lm.fit(cbind(1,data_complement),y)$fitted
     elseif estimation == :SCAD
         nrows, ncols = size(data_complement)
-        λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)))
+        λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
         SCAD = [scad_mod(v, data_complement,λ) for v in eachcol(y)]
     end    
 
