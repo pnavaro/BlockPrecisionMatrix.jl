@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 using Random, LinearAlgebra, Distributions
 using BenchmarkTools, GLMNet, Plots, StatsBase
+using InvertedIndices
 
-include("../src/PrecisionMatrix.jl")
-
+include("../src/ncvreg.jl")
+include("../src/rotation_matrix.jl")
+include("../src/fonctions_simu.jl")
+include("../src/prec_xia.jl")
+include("../src/precision_iwt.jl")
 
 # +
 p        = 20 
 n        = 500
 b        = 3 
 blocsOn  = [[1,3]]
-resBlocs = PrecisionMatrix.structure_cov(p, b, blocsOn, seed = 42)
+resBlocs = structure_cov(p, b, blocsOn, seed = 42)
 resBlocs[:blocs]
 
 D        = rand(Uniform(1e-4, 1e-2), p)
-resmat   = PrecisionMatrix.cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
+resmat   = cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
                    blocsOn, D)
 # -
 
@@ -44,21 +48,22 @@ using CategoricalArrays
 
 nblocks = length(levels(CategoricalArray(blocks)))
 
-# -
 
+# +
 """
     stat_test(block1_perm, block2, data_orig, points_x, points_y)
 
 We use the Xia estimator for the precision matrix
 """
-function stat_test(block1_perm, block2, 
-        data_orig, points_x, points_y)
+function stat_test(block1_perm, block2, data_orig, points_x, points_y)
     
-    data.orig[:, points_x] .= block1_perm
+    data_orig[:, points_x] .= block1_perm
     Tprec, TprecStd = prec_xia(data_orig)
     submat = TprecStd[points_x, points_y]
-    return sum(submat).^2 
+    return sum(submat).^2
+    
 end
+# -
 
 """ Permutation test:
   #T_coeff <- array(dim=c(B,p,p)) # permuted test statistics
@@ -73,7 +78,8 @@ function returning the fitted values pf regression with
 the SCAD penalty (used for conditional permutations)
 """
 function scad_mod(yvector, x, lambda)
-  scad = PrecisionMatrix.ncvreg(x, yvector, penalty=:SCAD, lambda=lambda)
+    
+  scad = ncvreg(x, yvector, penalty=:SCAD, lambda=lambda)
     
   n = size(x)[2]
   
@@ -117,66 +123,74 @@ seeds = round.(100000 * rand(B))
 responsible_test = zeros(Float64, (p,p))
 ntests_blocks = zeros(Float64,(p,p))
 zeromatrix = zeros(Float64,(p,p))
+B
 
-# -
-
+# +
+index = zeros(Int,(p,p))
+corrected_pval_temp = zeros(Float64,(p,p))
+    
 for ix in 2:nblocks  # x coordinate starting point.
 
     for lx in 0:(nblocks-ix) # length on x axis of the rectangle
         
         index_x = ix:(ix+lx) # index first block
-        points_x = which(blocks %in% index.x) # coefficients in block index.x
-        data_B1 = data[,points.x] # data of the first block
+        points_x = find(blocks .== index_x) # coefficients in block index.x
+        data_B1 = data[:,points_x] # data of the first block
 
-        data_B1_array = array(data=data.B1,dim=c(n,dim(data.B1)[2],B))
-        data_B1_list = lapply(seq(dim(data.B1.array)[3]), function(x) data.B1.array[ , , x])
+        data_B1_array = reshape(data_B1,(n,size(data.B1)[2],B))
+        data_B1_list = [data_B1_array[:,:,i] for i in 1:size(data_B1_array)[3]]
 
         for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
             for ly in 0:(ix-iy-1) # length on y axis of the rectangle
 
                 # data of the second block
                 index_y = iy:(iy+ly) # index second block
-                points_y = which(blocks %in% index.y)
-                data_B2 = data[,points.y]
+                points_y = findall( x -> x in index_y, blocks)
+                data_B2 = data[:,points_y]
 
-                index_complement = (1:nblocks)[-c(index.x,index.y)]
-                points_complement = which(blocks %in% index.complement)
-                data_complement = data[,points.complement]
+                index_complement = collect(1:nblocks)[Not([index_x;index_y])]
+                points_complement = findall( x -> x in index_complement, blocks)
+                data_complement = data[:,points_complement]
 
-                # print(paste0('x:',index.x))
-                # print(paste0('y:',index.y))
-                # print(paste0('c:', index.complement))
+                println("x:$index_x")
+                println("y:$index_y")
+                println("c:$index_complement")
 
                 # permuted data of the first block
-                ncol = dim(data.complement)[2]
+                ncol = size(data_complement)[2]
 
                 if ncol > 0
-                  data_B1_perm_l = lapply(data_B1_list,
-                                          permute_conditional,
-                                          n=n,
-                                          data_complement=data.complement,
-                                          estimation=estimation)
+                  data_B1_perm_l = [permute_conditional(B1, n, data_complement, estimation) for B1 in data_B1_list]
                 else
-                  data_B1_perm_l = lapply(data_B1_list,permute,n=n)
+                  data_B1_perm_l = [permute(B1,n) for B1 in data_B1_list]
                 end
 
-                data_B1_perm = simplify2array(data.B1.perm.l)
+                data_B1_perm = 
+                
+                for (k,m) in enumerate(data_B1_perm_l) 
+                    data_B1_perm[:,:,k] = m 
+                end
 
                 testmatrix = zeromatrix
-                testmatrix[points.x,points.y] = 1
+                testmatrix[points_x,points_y] = 1
                 ntests_blocks = ntests_blocks + testmatrix
-                plot(ntests.blocks,main=paste0('Blocks: ',index.x,'-',index.y))
-                plot(testmatrix,main=paste0('Blocks: ',index.x,'-',index.y))
+                
+                heatmap(ntests_blocks, title="Blocks: $index_x - $index_y")
+                heatmap(testmatrix,    title="Blocks: $index_x - $index_y")
 
-                T0_tmp = stat_test(data.B1,data.B2,data.orig=data,points.x=points.x,points.y=points.y)
+                T0_tmp = stat_test(data_B1,data_B2,data,points_x,points_y)
 
-                Tperm_tmp = apply(data.B1.perm,3,stat.test,block2=data.B2,
-                                  data.orig=data,points.x=points.x,points.y=points.y)
-                pval_tmp = mean(Tperm.tmp >= T0.tmp)
+                Tperm_tmp = []
+                for k in 1:size(data_B1_perm)[3]
+                    push!(Tperm_tmp,stat_test(data_B1_perm[:,:,k],data_B2, data, points_x, points_y))
+                end
+                
+                
+                pval_tmp = mean(Tperm_tmp .>= T0_tmp)
 
-                corrected_pval_temp = zeros(Float64,(p,p))
+                
                 corrected_pval_temp[points_x,points_y] = pval_tmp
-                corrected_pval_temp[points_y,points_x] = pval_tmp # simmetrization
+                corrected_pval_temp[points_y,points_x] = pval_tmp # symmetrization
 
                 # old adjusted p-value
                 pval_array[1,:,:] .= corrected_pval 
@@ -186,12 +200,14 @@ for ix in 2:nblocks  # x coordinate starting point.
                 # maximization for updating the adjusted p-value
                 corrected_pval = maximum(pval_array,dims=1) 
 
-                index = zeros(Int,(p,p))
                 for i in 1:p, j in 1:p 
                     index[i,j] = findmax(A[:,i,j])[2] 
                 end
-                responsible.test[which(index==2)] = paste0(paste0(index.x,collapse=','),'-',paste0(index.y,collapse=','))
+                responsible_test[which(index==2)] = "$(index_x) - $(index_y)"
             end
         end
     end
 end
+# -
+
+
