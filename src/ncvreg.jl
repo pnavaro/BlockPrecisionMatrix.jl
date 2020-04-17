@@ -60,7 +60,7 @@ function scad(z::Float64, l1::Float64, l2::Float64, γ::Float64)::Float64
     if abs(z) <= l1 
         return 0
     elseif abs(z) <= (l1*(1+l2)+l1) 
-        return s*(abs(z)-l1)/(v*(1+l2))
+        return s*(abs(z)-l1)/(γ*(1+l2))
     elseif abs(z) <= γ*l1*(1+l2)
         return s*(abs(z)-γ*l1/(γ-1))/(1-1/(γ-1)+l2)
     else 
@@ -395,6 +395,15 @@ function ncvreg(X::Array{Float64,2}, y::Vector{Float64}, λ::Vector{Float64}, pe
     beta = zeros(Float64, (ncol(X)+1, p))
     beta .= transpose(collect(hcat(a, b')))
 
+
     beta
+
+end
+
+function coef( self :: NCVREG )
+
+    which = 1:length(self.λ)
+
+    return beta[:, which]
 
 end
