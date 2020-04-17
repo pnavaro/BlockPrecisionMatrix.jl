@@ -29,13 +29,15 @@ heatmap(resmat[:CovMat], c=ColorGradient([:red,:blue]))
 
 heatmap(resmat[:PreMat])
 
-data = rand!( MvNormal(resmat[:CovMat]), zeros(Float64,(p, n)));
+d = MvNormal(resmat[:CovMat])
+rng = MersenneTwister(1234)
+data = rand!(rng, d , zeros(Float64,(p, n)));
 
 
 p_part = map( length,  resBlocs[:indblocs])
 
 
-blocks  =vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...);
+blocks  =vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...)
 
 B = 1000
 estimation = :SCAD
@@ -47,6 +49,51 @@ n, p  = size(data)
 using CategoricalArrays
 
 nblocks = length(levels(CategoricalArray(blocks)))
+
+
+# +
+using Random, GLMNet, InvertedIndices
+using Statistics, Distributions
+using LinearAlgebra
+
+function prec_xia( X :: Array{Float64, 2} )
+    
+    nrows, ncols = size(X)
+
+    betahat = zeros(Float64,(ncols-1,ncols))
+    reshat  = copy(X)
+    
+    for k in 1:ncols
+      y = view(X, :, k )
+      λ = [2*sqrt(var(y)*log(ncols)/nrows)]
+      fitreg = glmnet(X[:,Not(k)], y, lambda = λ, standardize=false)
+      betahat[:,k] .= vec(fitreg.betas)
+      reshat[:,k]  .= X[:,k] .- vec(predict(fitreg,X[:,Not(k)]))
+    end
+    
+    rtilde = cov(reshat) .* (nrows-1) ./ nrows
+    rhat   = rtilde
+    
+    for i in 1:ncols-1
+       for j in (i+1):ncols
+        rhat[i,j] = -(rtilde[i,j]+rtilde[i,i]*betahat[i,j]+rtilde[j,j]*betahat[j-1,i])
+        rhat[j,i] = rhat[i,j]
+      end
+    end
+    
+    Tprec    = copy(1 ./ rhat)
+    TprecStd = copy(Tprec)
+    
+    for i in 1:(ncols-1)
+        for j in (i+1):ncols
+            Tprec[i,j] = Tprec[j,i] = rhat[i,j]/(rhat[i,i]*rhat[j,j])
+            thetahatij = (1+(betahat[i,j]^2  * rhat[i,i]/rhat[j,j]))/(nrows*rhat[i,i]*rhat[j,j])   
+            TprecStd[i,j] = TprecStd[j,i] = Tprec[i,j]/sqrt(thetahatij)
+        end
+    end
+
+    Tprec, TprecStd
+end
 
 
 # +
@@ -124,20 +171,31 @@ responsible_test = zeros(Float64, (p,p))
 ntests_blocks = zeros(Float64,(p,p))
 zeromatrix = zeros(Float64,(p,p))
 B
+# -
+
+index = zeros(Int,(p,p))
+corrected_pval_temp = zeros(Float64,(p,p));
+
+ix = 2
+lx = 0
+index_x = ix:(ix+lx)
+
+points_x = findall(x -> x in index_x, blocks)
+
+data_B1 = data[:,points_x]
+
+data_B1_array = reshape(data_B1,n,size(data_B1)[2],B)
 
 # +
-index = zeros(Int,(p,p))
-corrected_pval_temp = zeros(Float64,(p,p))
-    
+
 for ix in 2:nblocks  # x coordinate starting point.
 
     for lx in 0:(nblocks-ix) # length on x axis of the rectangle
         
         index_x = ix:(ix+lx) # index first block
-        points_x = find(blocks .== index_x) # coefficients in block index.x
+        points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
         data_B1 = data[:,points_x] # data of the first block
-
-        data_B1_array = reshape(data_B1,(n,size(data.B1)[2],B))
+        data_B1_array = reshape(data_B1,n,size(data_B1)[2],B)
         data_B1_list = [data_B1_array[:,:,i] for i in 1:size(data_B1_array)[3]]
 
         for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
