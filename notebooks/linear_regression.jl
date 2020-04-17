@@ -6,8 +6,8 @@
 #     text_representation:
 #       extension: .jl
 #       format_name: light
-#       format_version: '1.4'
-#       jupytext_version: 1.2.4
+#       format_version: '1.5'
+#       jupytext_version: 1.3.0
 #   kernelspec:
 #     display_name: Julia 1.2.0
 #     language: julia
@@ -22,7 +22,7 @@ using GLM, LinearAlgebra, Plots, Random, Statistics
 rng = MersenneTwister(0)
 n, p = 10, 1
 X = randn(rng, (n, p))
-b = randn(rng, p) 
+b = collect(1:p) 
 y = 0.1*randn(rng, n) .+  X * b
 
 xmin, xmax = extrema(X[:,1])
@@ -79,3 +79,5 @@ fitted = lm(XX, y)
 
 scatter( X[:,1], y)
 plot!(x, predict(fitted, hcat(ones(npoints),x)))
+
+
