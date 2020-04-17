@@ -25,3 +25,10 @@ julia> using IJulia
 julia> notebook(dir=pwd())
 [ Info: running ...
 ```
+
+# Some linked packages 
+
+- [SparseRegression.jl](https://github.com/joshday/SparseRegression.jl)
+- [Lasso.jl](https://github.com/JuliaStats/Lasso.jl)
+- [QuantileRegression.jl](https://github.com/pkofod/QuantileRegression.jl)
+- [CovarianceEstimation.jl](https://github.com/mateuszbaran/CovarianceEstimation.jl)
