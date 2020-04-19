@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Function estimating the precision matrix with the method from Xia et al (code Madison)
 library(glmnet)
 
