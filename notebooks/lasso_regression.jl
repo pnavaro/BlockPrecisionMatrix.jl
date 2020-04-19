@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-include("src/utils.jl")
+include("../src/utils.jl")
 
 # + {"endofcell": "--"}
 using Plots, CSV
@@ -21,7 +21,7 @@ scatter!( X_test, y_test)
 # --
 
 # +
-include("src/lasso.jl")
+include("../src/lasso.jl")
 model = LassoRegression(X_train, y_train,
                         degree=15, 
                         reg_factor=0.05,
@@ -38,8 +38,6 @@ scatter( X_test, y_pred)
 scatter!(X_test, y_test)
 
 # +
-include("src/lasso.jl")
-
 fitreg = LassoRegression(degree=15, 
                          reg_factor=0.05,
                          learning_rate=0.001,
