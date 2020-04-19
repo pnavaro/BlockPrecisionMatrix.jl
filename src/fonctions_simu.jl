@@ -2,6 +2,9 @@ using  Random, StatsBase
 import Base.Iterators: flatten
 using  LinearAlgebra
 
+export structure_cov
+
+
 """
     structure_cov(p, blocsOn; b = 10, seed = p)
 
@@ -20,7 +23,7 @@ function structure_cov(p :: Int64,
   
   blocs = sample(rng, 3:(p-2), (b-1), replace=false)
   sort!(blocs)
-  @show blocs = [1, blocs..., p]
+  blocs = [1, blocs..., p]
   indblocs = UnitRange{Int64}[]
   push!(indblocs, 1:blocs[2])
   for i in 2:(length(blocs)-1) 
@@ -29,13 +32,13 @@ function structure_cov(p :: Int64,
   
   matBlocs = zeros(Int64, (p, p))
 
-  for l in 1:length(indblocs)
-      matBlocs[indblocs[l], indblocs[l]] .= 1
+  for l in indblocs
+      matBlocs[l, l] .= 1
   end
   
-  for k in 1:length(blocsOn)
-      for i in indblocs[blocsOn[k][1]]
-          for j in indblocs[blocsOn[k][2]]
+  for bloc in blocsOn
+      for i in indblocs[bloc[1]]
+          for j in indblocs[bloc[2]]
               matBlocs[i, j] = 1
               matBlocs[j, i] = 1
           end
@@ -76,7 +79,6 @@ function cov_simu(blocs, indblocs, blocsOn, D)
   end
   
   for i in 1:length(blocsOn)
-    @show indblocs[i]
     P[indblocs[blocsOn[i][1]] , indblocs[blocsOn[i][2]]] .= 0
   end
 
