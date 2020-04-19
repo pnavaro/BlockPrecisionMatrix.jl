@@ -3,6 +3,5 @@ using Random
 using Statistics
 using Test
 
-include("test_std.jl")
-include("test_gaussian.jl")
+include("test_prec_xia.jl")
 include("test_rotation_matrix.jl")

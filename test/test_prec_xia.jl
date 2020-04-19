@@ -1,38 +1,34 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,Rmd
-    text_representation:
-      extension: .Rmd
-      format_name: rmarkdown
-      format_version: '1.1'
-      jupytext_version: 1.2.4
-  kernelspec:
-    display_name: R
-    language: R
-    name: ir
----
+using LinearAlgebra
+using PrecisionMatrix
+using RCall
+using Test
 
-```{r}
-library(glmnet)
-nrows <- 8
-ncols <- 5
+nrows, ncols = 8, 5
 
-X0 <- matrix(1:nrows*ncols, nrows, ncols)
-Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
-X <- backsolve( chol(Sigmainv), X0)
-X
-```
+@rput ncols
+@rput nrows
+
+X_R = R"""
+    X0 <- matrix(1:nrows*ncols, nrows, ncols)
+    Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
+    backsolve(chol(Sigmainv), X0)
+"""
+
+X0 = repeat(1:nrow, 1, ncols) .* ncols
+
+σ_inv = .25 .^ (abs.( collect(1:ncols) .- collect(1:ncols)'))
+
+X_jl = cholesky(σ_inv).U \ X0[1:ncols,:]
+
+@test X_jl ≈ Array(X_R)
+
+#=
 
 ```{r}
 k <- 1
 fitreg  = glmnet::glmnet(X[,-k],X[,k], family="gaussian",
                              standardize = FALSE)
 fitreg$beta
-```
-
-```{r}
-
 ```
 
 ```{r}
@@ -103,3 +99,4 @@ var(X[,1])
 ```{r}
 
 ```
+=#
