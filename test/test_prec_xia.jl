@@ -1,58 +1,27 @@
+using GLMNet
+using InvertedIndices
 using LinearAlgebra
 using PrecisionMatrix
 using RCall
 using Test
 R"library(glmnet)"
 
+
+using RCall, Random, GLMNet, InvertedIndices
+using Statistics, Distributions
+
+using LinearAlgebra
 nrows, ncols = 8, 5
-
-
 @rput ncols
 @rput nrows
+R""" 
+X0 <- matrix(1:nrows*ncols, nrows, ncols)
+Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
+X <- backsolve( chol(Sigmainv), X0)"""
 
-X_R = R"""
-    X0 <- matrix(1:nrows*ncols, nrows, ncols)
-    Sigmainv <- .25^abs(outer(1:ncols,1:ncols,"-"))
-    backsolve(chol(Sigmainv), X0)
-"""
+X = rcopy(R"X")
 
-X0 = repeat(1:nrow, 1, ncols) .* ncols
-
-σ_inv = .25 .^ (abs.( collect(1:ncols) .- collect(1:ncols)'))
-
-X_jl = cholesky(σ_inv).U \ X0[1:ncols,:]
-
-@test X_jl ≈ rcopy(X_R)
-
-
-beta_R = R"""
-k <- 1
-fitreg  = glmnet::glmnet(X[,-k],X[,k], family="gaussian",
-                             standardize = FALSE)
-fitreg$beta
-"""
-
-#=
-```{r}
-lambda = rep(0,ncol(X))
-for (k in 1:ncol(X)) {
-    a = 2 * (ncol(X)-k+1) / ncol(X)
-    lambda[k] = a*sqrt(var(X[,k])*log(ncol(X))/nrow(X))
-    }
-
-lambda
-```
-
-```{r}
-for (k in 1:ncol(X)) {
-fitreg  = glmnet::glmnet(X[,-k],X[,k], family="gaussian",
-                         lambda = lambda,
-                             standardize = FALSE)
-print(fitreg$beta[1])
-}
-```
-
-```{r}
+result = R"""
 PrecXia = function(X){
   n = nrow(X)
   betahat = matrix(0,ncol(X)-1,ncol(X))
@@ -84,21 +53,13 @@ PrecXia = function(X){
   
   MatPrecXia = list(Tprec=Tprec,TprecStd=TprecStd)
 }
-```
 
-```{r}
-result <- PrecXia(X)
-```
+PrecXia(X)
+"""
 
-```{r}
-result
-```
+Tprec_jl, TprecStd_jl = PrecisionMatrix.prec_xia(X)
 
-```{r}
-var(X[,1])
-```
+result_R = rcopy(result)
 
-```{r}
-
-```
-=#
+@test Tprec_jl ≈ result_R[:Tprec]
+@test TprecStd_jl ≈ result_R[:TprecStd]
