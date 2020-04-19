@@ -2,8 +2,10 @@ using LinearAlgebra
 using PrecisionMatrix
 using RCall
 using Test
+R"library(glmnet)"
 
 nrows, ncols = 8, 5
+
 
 @rput ncols
 @rput nrows
@@ -20,17 +22,17 @@ X0 = repeat(1:nrow, 1, ncols) .* ncols
 
 X_jl = cholesky(σ_inv).U \ X0[1:ncols,:]
 
-@test X_jl ≈ Array(X_R)
+@test X_jl ≈ rcopy(X_R)
 
-#=
 
-```{r}
+beta_R = R"""
 k <- 1
 fitreg  = glmnet::glmnet(X[,-k],X[,k], family="gaussian",
                              standardize = FALSE)
 fitreg$beta
-```
+"""
 
+#=
 ```{r}
 lambda = rep(0,ncol(X))
 for (k in 1:ncol(X)) {
