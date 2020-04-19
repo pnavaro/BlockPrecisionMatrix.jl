@@ -20,7 +20,8 @@ julia --project
 
 ```julia
 julia> using Pkg
-julia> Pkg.instantiate()
+julia> pkg"instantiate"
+julia> pkg"add https://github.com/pnavaro/NCVREG.jl.git"
 julia> using IJulia
 julia> notebook(dir=pwd())
 [ Info: running ...
