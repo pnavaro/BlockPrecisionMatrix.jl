@@ -88,6 +88,6 @@ function cov_simu(blocs, indblocs, blocs_on, D)
   # Matrice de precision
   PreMat = P' * Diagonal(1 ./ D) * P
   
-  return Dict(:CovMat => collect(CovMat), :PreMat => PreMat)
+  return collect(CovMat), PreMat
 
 end
