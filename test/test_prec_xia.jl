@@ -1,9 +1,11 @@
+
 using GLMNet
 using InvertedIndices
 using LinearAlgebra
 using PrecisionMatrix
 using RCall
 using Test
+
 R"library(glmnet)"
 
 
@@ -57,9 +59,13 @@ PrecXia = function(X){
 PrecXia(X)
 """
 
+@testset "Prec Xia" begin
+
 Tprec_jl, TprecStd_jl = PrecisionMatrix.prec_xia(X)
 
 result_R = rcopy(result)
 
 @test Tprec_jl ≈ result_R[:Tprec]
 @test TprecStd_jl ≈ result_R[:TprecStd]
+
+end
