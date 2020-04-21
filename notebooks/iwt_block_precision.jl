@@ -1,34 +1,40 @@
+# -*- coding: utf-8 -*-
 using CategoricalArrays
 using Random, LinearAlgebra, Distributions
 using GLMNet
 using InvertedIndices
 using NCVREG
+using Plots
 
-import PrecisionMatrix: structure_cov
-import PrecisionMatrix: cov_simu
-import PrecisionMatrix: permute_conditional
+include("../src/rotation_matrix.jl")
+include("../src/fonctions_simu.jl")
 
-p        = 20 
-n        = 500
-b        = 3 
-blocsOn  = [[1,3]]
-resBlocs = structure_cov(p, b, blocsOn, seed = 42)
-resBlocs[:blocs]
+p         = 20 
+n         = 500
+b         = 3 
+blocs_on  = [[1,3]]
+rng = MersenneTwister(42)
+blocs, indblocs = structure_cov(rng, p, b, blocs_on)
+blocs
 
-D        = rand(Uniform(1e-4, 1e-2), p)
-resmat   = cov_simu(resBlocs[:blocs], resBlocs[:indblocs], 
-                   blocsOn, D)
+indblocs
 
-# heatmap(resmat[:CovMat], c=ColorGradient([:red,:blue]))
-# heatmap(resmat[:PreMat])
+D = rand(rng, Uniform(1e-4, 1e-2), p)
+covmat, premat   = cov_simu(blocs, indblocs, blocs_on, D)
 
-d = MvNormal(resmat[:CovMat])
-rng = MersenneTwister(1234)
-data = rand!(rng, d , zeros(Float64,(p, n)));
+hm = plot(layout=(1,2))
+heatmap!(hm[1,1], covmat, c=ColorGradient([:red,:blue]), aspect_ratio=:equal)
+heatmap!(hm[1,2], premat, aspect_ratio=:equal)
 
-p_part = map( length,  resBlocs[:indblocs])
+d = MvNormal(covmat)
 
-blocks  =vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...)
+data = rand!(rng, d, zeros(Float64,(p, n)));
+
+data
+
+p_part = map( length,  indblocs)
+
+blocks  = vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...)
 
 B = 1000
 estimation = :SCAD
@@ -41,7 +47,7 @@ nblocks = length(levels(CategoricalArray(blocks)))
 # tests on rectangles
 pval_array = zeros(Float64,(2,p,p))
 corrected_pval = zeros(Float64, (p,p))
-seeds = round.(100000 * rand(B))
+seeds = round.(100000 * rand(rng, B))
 
 responsible_test = zeros(Float64, (p,p))
 ntests_blocks = zeros(Float64,(p,p))
@@ -60,9 +66,11 @@ lx = 0  # for lx in 0:(nblocks-ix) # length on x axis of the rectangle
 index_x = ix:(ix+lx) # index first block
 points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
 data_B1 = data[:,points_x] # data of the first block
-data_B1_array = Iterators.repeated(data_B1, B)
+# data_B1_array = Iterators.repeated(data_B1, B)
 
-data_B1_list = [data_B1 for i in 1:B]
+# +
+# data_B1_list = [data_B1 for i in 1:B]
+# -
 
 iy = 1 # for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
 ly = 0 # for ly in 0:(ix-iy-1) # length on y axis of the rectangle
@@ -72,7 +80,7 @@ index_y = iy:(iy+ly) # index second block
 points_y = findall( x -> x in index_y, blocks)
 data_B2 = data[:,points_y]
 
-index_complement = collect(1:nblocks)[Not([index_x;index_y])]
+index_complement = collect(1:nblocks)[Not([index_x index_y])]
 points_complement = findall( x -> x in index_complement, blocks)
 data_complement = data[:,points_complement]
 
@@ -100,8 +108,8 @@ end
 
 @show data_B1_perm_l
 
-#=
-                
+# =
+
 for (k,m) in enumerate(data_B1_perm_l) 
     data_B1_perm[:,:,k] = m 
 end
