@@ -6,6 +6,8 @@ library(mvtnorm)
 library(fields)
 library(ncvreg)
 library(tictoc)
+library(mixAK)
+library(glmnet)
 
 p        = 20 
 n        = 500 
