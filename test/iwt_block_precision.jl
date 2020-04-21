@@ -54,6 +54,9 @@ corrected_pval_temp = zeros(Float64,(p,p));
 
 ix = 2  # for ix in 2:nblocks  # x coordinate starting point.
 lx = 0  # for lx in 0:(nblocks-ix) # length on x axis of the rectangle
+
+# FIRST BLOCK
+
 index_x = ix:(ix+lx) # index first block
 points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
 data_B1 = data[:,points_x] # data of the first block
@@ -64,7 +67,7 @@ data_B1_list = [data_B1 for i in 1:B]
 iy = 1 # for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
 ly = 0 # for ly in 0:(ix-iy-1) # length on y axis of the rectangle
 
-# data of the second block
+# SECOND BLOCK block
 index_y = iy:(iy+ly) # index second block
 points_y = findall( x -> x in index_y, blocks)
 data_B2 = data[:,points_y]
@@ -77,17 +80,25 @@ println("x:$index_x")
 println("y:$index_y")
 println("c:$index_complement")
 
-
 # permuted data of the first block
-ncol = size(data_complement)[2]
+@show ncol = size(data_complement)[2]
+
+nrows, ncols = size(data_complement)
+λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
+
+B1 = data_B1_list[1]
+
+data_perm = B1
+
+
 
 if ncol > 0
-  data_B1_perm_l = [permute_conditional(B1, n, data_complement, estimation) for B1 in data_B1_list]
+    data_B1_perm_l = [permute_conditional(B1, n, data_complement, estimation) for B1 in data_B1_list]
 else
-  data_B1_perm_l = [permute(B1,n) for B1 in data_B1_list]
+    data_B1_perm_l = [permute(B1,n) for B1 in data_B1_list]
 end
 
-@show data_B1_perm 
+@show data_B1_perm_l
 
 #=
                 
