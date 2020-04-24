@@ -18,7 +18,7 @@ b         = 3
 blocs_on  = [[1,3]]
 rng = MersenneTwister(42)
 blocs, indblocs = structure_cov(rng, p, b, blocs_on)
-blocs
+blocs, indblocs
 
 indblocs
 
@@ -42,7 +42,7 @@ blocks  = vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...)
 B = 1000
 estimation = :SCAD
 
-n, p  = size(data)
+p, n  = size(data)
 
 nblocks = length(levels(CategoricalArray(blocks)))
 
@@ -95,14 +95,104 @@ println("c:$index_complement")
 # permuted data of the first block
 @show ncol = size(data_complement)[2]
 
-nrows, ncols = size(data_complement)
-λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
+B1 = data_B1
 
-B1 = data_B1_list[1]
+# +
+"""
+    function SCADmod(yvector, x, lambda)
+
+function returning the fitted values pf regression with 
+the SCAD penalty (used for conditional permutations)
+
+```R
+SCADmod = function(yvector,x,lambda){
+  regSCAD = ncvreg::ncvreg(x,yvector,
+                           penalty='SCAD',lambda=lambda)
+  fitted = cbind(1,x) %*% regSCAD\$beta
+  return(fitted)
+}
+```
+
+"""
+function scad_mod(yvector, x, λ)
+    
+  γ = 3.7
+
+  @show x
+  beta = ncvreg(x, yvector, λ, :SCAD, γ)
+    
+  @show size(x)
+  @show size(beta)
+  n = size(x)[2]
+  
+  fitted = hcat(ones(n),x) * beta
+    
+  @show size(fitted)
+  return fitted
+
+end
+
+""" 
+    permute(x, n) 
+
+Permutation
+
+"""
+permute(x :: Array{Float64, 2}, n) = x[randperm(n), :] 
+
+
+
+"""
+    permute_conditional(y, n, data_complement, estimation)
+
+uses SCAD/OLS
+
+```R
+permute.conditional = function(y,n,data.complement,estimation){ 
+    # uses SCAD/OLS
+  permutation = sample(n)
+
+  # SCAD/OLS estimaytion
+  fitted = switch(estimation,
+                  LM=lm.fit(cbind(1,data.complement),y)\$fitted,
+                  SCAD=apply(y,2,SCADmod,x=data.complement,
+                             lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
+
+  residuals = y - fitted
+
+  result = fitted + residuals[permutation,]
+  return(result)
+}
+```
+
+"""
+function permute_conditional(y, n, data_complement, estimation)
+
+    # SCAD/OLS estimation
+    if estimation == :LM
+        XX = hcat(ones(n), data_complement)
+        beta = pinv(XX) * y
+        # do prediction
+        fitted = XX * beta
+    elseif estimation == :SCAD
+        nrows, ncols = size(data_complement)
+        λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
+        fitted = [scad_mod(v, data_complement,λ) for v in eachcol(y)]
+    end    
+
+    @show size(y)
+    @show size(fitted)
+    residuals = y .- fitted
+    
+    return fitted .+ residuals[permutation,:]
+
+end
+
+# -
+
+permute_conditional(B1, n, data_complement, estimation) 
 
 data_perm = B1
-
-
 
 if ncol > 0
     data_B1_perm_l = [permute_conditional(B1, n, data_complement, estimation) for B1 in data_B1_list]
@@ -112,7 +202,8 @@ end
 
 @show data_B1_perm_l
 
-# =
+# +
+#=
 
 for (k,m) in enumerate(data_B1_perm_l) 
     data_B1_perm[:,:,k] = m 
@@ -132,9 +223,7 @@ for k in 1:size(data_B1_perm)[3]
     push!(Tperm_tmp,stat_test(data_B1_perm[:,:,k],data_B2, data, points_x, points_y))
 end
 
-
 pval_tmp = mean(Tperm_tmp .>= T0_tmp)
-
 
 corrected_pval_temp[points_x,points_y] = pval_tmp
 corrected_pval_temp[points_y,points_x] = pval_tmp # symmetrization
@@ -152,9 +241,9 @@ for i in 1:p, j in 1:p
 end
 responsible_test[which(index==2)] = "$(index_x) - $(index_y)"
 
-#             end
-#         end
-#     end
-# end
+            end
+        end
+    end
+end
 
 =#
