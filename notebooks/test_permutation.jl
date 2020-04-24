@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 using Pkg
-pkg"add CovarianceMatrices"
+pkg"add https://github.com/pnavaro/NCVREG.jl"
 
-using CovarianceMatrices
-
-# +
 using LinearAlgebra
 using Random
 using RCall
+using Plots
+using NCVREG
 
-include("../src/permute_conditional.jl")
-# -
 
 # somme les valeurs propres de l'inverse de la covariance de M1
 
@@ -27,22 +24,6 @@ SCADmod = function(yvector,x,lambda){
   return(fitted)
 }
 
-permute.conditional = function(y,n,data.complement,estimation){ 
-    # uses SCAD/OLS
-  permutation = sample(n)
-
-  # SCAD/OLS estimaytion
-  fitted = switch(estimation,
-                  LM=lm.fit(cbind(1,data.complement),y)$fitted,
-                  SCAD=apply(y,2,SCADmod,x=data.complement,
-                             lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
-
-  residuals = y - fitted
-
-  result = fitted + residuals[permutation,]
-  return(result)
-}
-
 set.seed(1111)
 
 n = 100
@@ -52,79 +33,62 @@ Y = cbind(X%*%matrix(c(1,1,1),3,1)+rnorm(n)*.1,Z+rnorm(5*n)*.1)
 
 M = cbind(Y,X,Z)
 
-res = permute.conditional(Y,n,Z,"SCAD")
+SCADmod = function(yvector,x,lambda){
+  regSCAD = ncvreg::ncvreg(x,yvector,
+                           penalty='SCAD',lambda=lambda)
+  return(cbind(1,x) %*% regSCAD$beta)
+}
 
+permutation = sample(n)
+
+fitted = apply(Y,2,SCADmod,x=Z,lambda=2*sqrt(var(Y[,1])*log(ncol(Z))/nrow(Z)))
+
+residuals = Y - fitted
+
+fitted + residuals[permutation,]
+print(dim(res))
 M1 = cbind(res,X,Z)
 
-par(mfrow = c(1,2),mar = c(3,3,3,3))
-image.plot(solve(cov(M)))
-image.plot(solve(cov(M1)))
+par(mfrow = c(1,2), mar=c(0,0,0,0))
+image.plot(solve(cov(M)),  asp=1, axes=F, legend.shrink=.4 )
+image.plot(solve(cov(M1)),  asp=1, axes=F, legend.shrink=.4)
 """
 
-M = rcopy(M)
+# +
+@rget permutation
+@rget X
+@rget Y
+@rget Z
 
-M1 = rcopy(M1)
+row_y, col_y = size(Y)
+row_z, col_z = size(Z)
+fitted = zero(Y)
+for j in 1:col_y
+    y = Y[:,j]
+    λ = 2*sqrt(var(Y[:,1])*log(col_z)/row_z)
+    beta = NCVREG.coef(SCAD(Z, y, [λ]))  
+    fitted[:,j] .= vec(hcat(ones(row_z),Z) * beta)
+end
 
-cov(M)
+residuals = Y .- fitted
+    
+result_jl = fitted .+ residuals[permutation,:]
+M1 = hcat(result_jl, X, Z)
 
-rcopy(R"cov(M)")
+M1 ≈ rcopy(M1)
+# -
 
-# - Julia `cov` : Compute the covariance matrix of the matrix X along the dimension dims. If corrected is true (the default) then the sum is scaled with n-1, whereas the sum is scaled with n if corrected is false where n = size(X, dims).
-# - R `cov` : 
+image = plot(layout=(1,2))
+heatmap!(image[1,1], inv(cov(M)), aspect_ratio=:equal, c=cgrad([:blue, :white,:red, :yellow]))
+heatmap!(image[1,2], inv(cov(M1)), aspect_ratio=:equal, c=cgrad([:blue, :white,:red, :yellow]))
 
+# # Intialize data with Julia
+
+# +
 rng = MersenneTwister(1111)
 
 n = 100
 Z = randn(rng, (n,5)) # data complement
 X = randn(rng, (n,3))
-Y = hcat( X .* ones(3)' .+ randn(n), Z .+ 0.1 * randn(rng,(n,5)))
-
-@show size(Y)
-
+Y = hcat( X * ones(3) .+ 0.1 .* randn(n), Z .+ 0.1 * randn(rng,(n,5)))
 M = hcat(Y,X,Z)
-
-res = permute_conditional(Y, n, Z, "SCAD")
-
-M1 = hcat(res, X, Z)
-
-rcopy(R"cov(M1)")
-
-cov(M1, corrected=false)
-
-?cov
-
-sum(eigen(inv(cov(M1))).values) 
-
-#=
-"""
-
-# [1] 31.91363
-
-@show S1
-
-# somme les valeurs propres de l'inverse de la covariance de M
-S2 = R"""
-sum(eigen(solve(cov(M)))$values) 
-"""
-
-# [1] 2346.617
-
-@show S2
-
-S3 = R"""
-sum(apply(M,2,var)) # somme des variances  des variables qui composent M
-"""
-# [1] 24.05086
-@show S3
-
-# après la permutation la somme les valeurs propres de l'inverse de la 
-# covariance de M1 est du même ordre que somme des variances  des variables qui composent M
-# on purrait donc tester si
-
-test_covariance = R"abs( sum(eigen(solve(cov(M1)))$values)-sum(apply(M,2,var)))"
-
-
-@test rcopy(test_covariance) < 10.0
-
-end
-=#
