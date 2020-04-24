@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+using Pkg
+pkg"add https://github.com/pnavaro/NCVREG.jl"
+
 using CategoricalArrays
 using Random, LinearAlgebra, Distributions
 using GLMNet
@@ -75,7 +78,8 @@ data_B1 = data[:,points_x] # data of the first block
 iy = 1 # for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
 ly = 0 # for ly in 0:(ix-iy-1) # length on y axis of the rectangle
 
-# SECOND BLOCK block
+# # SECOND BLOCK block
+
 index_y = iy:(iy+ly) # index second block
 points_y = findall( x -> x in index_y, blocks)
 data_B2 = data[:,points_y]
