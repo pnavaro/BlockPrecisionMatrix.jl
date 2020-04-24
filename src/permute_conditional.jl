@@ -20,14 +20,14 @@ function scad_mod(yvector, x, λ)
     
   γ = 3.7
 
-  @show x
+  @show size(x)
   beta = ncvreg(x, yvector, λ, :SCAD, γ)
     
-  @show size(x)
   @show size(beta)
-  n = size(x)[2]
+  n = size(x)[1]
+  xx = hcat(ones(n),x) 
   
-  fitted = hcat(ones(n),x) * beta
+  fitted = xx * beta[:,1:length(λ)]
     
   @show size(fitted)
   return fitted

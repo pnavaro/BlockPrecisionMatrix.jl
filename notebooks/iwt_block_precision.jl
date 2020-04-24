@@ -118,10 +118,9 @@ function scad_mod(yvector, x, λ)
     
   γ = 3.7
 
-  @show x
-  beta = ncvreg(x, yvector, λ, :SCAD, γ)
-    
+  @show size(yvector)
   @show size(x)
+  beta = ncvreg(x, yvector, λ, :SCAD, γ)
   @show size(beta)
   n = size(x)[2]
   
@@ -168,6 +167,8 @@ permute.conditional = function(y,n,data.complement,estimation){
 """
 function permute_conditional(y, n, data_complement, estimation)
 
+    @show size(y)
+    @show size(data_complement)
     # SCAD/OLS estimation
     if estimation == :LM
         XX = hcat(ones(n), data_complement)
@@ -177,7 +178,8 @@ function permute_conditional(y, n, data_complement, estimation)
     elseif estimation == :SCAD
         nrows, ncols = size(data_complement)
         λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
-        fitted = [scad_mod(v, data_complement,λ) for v in eachcol(y)]
+        @show size(λ)
+        fitted = [scad_mod(v, data_complement, λ) for v in eachcol(y)]
     end    
 
     @show size(y)
