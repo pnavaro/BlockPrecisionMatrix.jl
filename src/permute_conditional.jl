@@ -1,3 +1,5 @@
+using Statistics
+
 import NCVREG: ncvreg
 
 """
@@ -67,21 +69,22 @@ permute.conditional = function(y,n,data.complement,estimation){
 """
 function permute_conditional(y, n, data_complement, estimation)
 
+    @show size(y)
+
+    fitted = similar(y)
   
-    # SCAD/OLS estimation
     if estimation == :LM
         XX = hcat(ones(n), data_complement)
         beta = pinv(XX) * y
-        # do prediction
-        fitted = XX * beta
+        fitted .= XX * beta
     elseif estimation == :SCAD
         nrows, ncols = size(data_complement)
         λ = 2*sqrt(var(y[:,1]) * log(ncols)/nrows)
-        fitted = [scad_mod(v, data_complement,λ) for v in eachcol(y)]
+        fitted .= hcat([scad_mod(v, data_complement,λ) for v in eachcol(y)]...)
     end    
 
-    @show size(y)
-    fitted = hcat(fitted...)
+    @show size(fitted)
+
     residuals = y .- fitted
     n = size(y)[1]
     permutation = randperm(n)
