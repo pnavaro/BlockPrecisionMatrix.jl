@@ -1,21 +1,80 @@
+using RCall
 
-x = [-0.0284549620710400870 -0.0122440684232119280; 
-      0.0716112730505032400  0.0261162885388371150; 
-      0.0047189645595980870 -0.0255279757968214540; 
-     -0.0455012934264837100  0.0264864104025792500; 
-     -0.0484641646123620300 -0.1185993149351486200;
-     -0.0423242764655280600 -0.0096633082326328080;
-     -0.0747734854117619700 -0.0241249982985367800; 
-     -0.0842184355024168700 -0.0224764555952190120; 
-     -0.0117408922099872200 -0.0621489516440240200;
-     -0.0167293780079386500 -0.0715735965851949000;
-     -0.1280565191935996200 -0.0412046522295802600; 
-      0.0706583746836963600 -0.0232111852578045900; 
-      0.0358534043008677250  0.0031800852881896367;
-      0.1164353303893981800  0.1192155693013011600; 
-      0.1024524769392644900  0.0826106870585736300; 
-      0.0059111582359088755  0.0206314612868970030; 
-      0.0454342028698671440  0.0049676242109145210;
-      0.0153471906969938980 -0.0917097048504037600;
-      0.0278118369883088470 -0.0318176186534637700;
-     -0.0914414654791870000 -0.0532195927173429400]
+# somme les valeurs propres de l'inverse de la covariance de M1
+
+S1 = R"""
+library(ncvreg)
+
+SCADmod = function(yvector,x,lambda){
+  regSCAD = ncvreg::ncvreg(x,yvector,
+                           penalty='SCAD',lambda=lambda)
+  fitted = cbind(1,x) %*% regSCAD$beta
+  return(fitted)
+}
+
+permute.conditional = function(y,n,data.complement,estimation){ 
+    # uses SCAD/OLS
+  permutation = sample(n)
+
+  # SCAD/OLS estimaytion
+  fitted = switch(estimation,
+                  LM=lm.fit(cbind(1,data.complement),y)$fitted,
+                  SCAD=apply(y,2,SCADmod,x=data.complement,
+                             lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
+
+  residuals = y - fitted
+
+  result = fitted + residuals[permutation,]
+  return(result)
+}
+
+set.seed(3)
+
+n = 100
+Z = matrix(rnorm(500),n,5) # data complement
+X = matrix(rnorm(300),n,3)
+Y = cbind(X%*%matrix(c(1,1,1),3,1),Z+rnorm(500)*.1)
+
+M = cbind(Y,X,Z)
+M = M + diag(M)
+
+res = permute.conditional(Y,n,Z,"SCAD")
+
+M1 = cbind(res,X,Z)
+
+sum(eigen(solve(cov(M1)))$values) 
+"""
+
+# [1] 31.91363
+
+@show S1
+
+# somme les valeurs propres de l'inverse de la covariance de M
+S2 = R"""
+sum(eigen(solve(cov(M)))$values) 
+"""
+
+# [1] 2346.617
+
+@show S2
+
+S3 = R"""
+sum(apply(M,2,var)) # somme des variances  des variables qui composent M
+"""
+# [1] 24.05086
+@show S3
+
+# après la permutation la somme les valeurs propres de l'inverse de la 
+# covariance de M1 est du même ordre que somme des variances  des variables qui composent M
+# on purrait donc tester si
+
+test_covariance = R"abs( sum(eigen(solve(cov(M1)))$values)-sum(apply(M,2,var)))<10"
+
+@testset "Permutation" begin
+
+@test rcopy(test_covariance)
+
+end
+
+
+
