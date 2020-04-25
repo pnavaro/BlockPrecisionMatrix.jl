@@ -11,6 +11,8 @@ using Plots
 
 include("../src/rotation_matrix.jl")
 include("../src/fonctions_simu.jl")
+include("../src/permute_conditional.jl")
+include("../src/stat_test.jl")
 
 p         = 20 
 n         = 500
@@ -69,11 +71,7 @@ lx = 0  # for lx in 0:(nblocks-ix) # length on x axis of the rectangle
 index_x = ix:(ix+lx) # index first block
 points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
 data_B1 = data[:,points_x] # data of the first block
-# data_B1_array = Iterators.repeated(data_B1, B)
-
-# +
-# data_B1_list = [data_B1 for i in 1:B]
-# -
+data_B1_array = Iterators.repeated(data_B1, B)
 
 iy = 1 # for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
 ly = 0 # for ly in 0:(ix-iy-1) # length on y axis of the rectangle
@@ -95,29 +93,13 @@ println("c:$index_complement")
 # permuted data of the first block
 @show ncol = size(data_complement)[2]
 
-B1 = data_B1
-
-include("../src/permute_conditional.jl")
-
-permute_conditional(B1, n, data_complement, estimation) 
-
-data_perm = B1
-
 if ncol > 0
-    data_B1_perm_l = [permute_conditional(B1, n, data_complement, estimation) for B1 in data_B1_list]
+    data_B1_perm = [permute_conditional(rng, B1, data_complement) for B1 in data_B1_array]
 else
-    data_B1_perm_l = [permute(B1,n) for B1 in data_B1_list]
+    data_B1_perm = [permute(B1,n) for B1 in data_B1_list]
 end
-
-@show data_B1_perm_l
 
 # +
-#=
-
-for (k,m) in enumerate(data_B1_perm_l) 
-    data_B1_perm[:,:,k] = m 
-end
-
 testmatrix = zeromatrix
 testmatrix[points_x,points_y] = 1
 ntests_blocks = ntests_blocks + testmatrix
@@ -156,3 +138,6 @@ responsible_test[which(index==2)] = "$(index_x) - $(index_y)"
 end
 
 =#
+# -
+
+
