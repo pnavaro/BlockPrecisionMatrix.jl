@@ -8,10 +8,12 @@ using GLMNet
 using InvertedIndices
 using NCVREG
 using Plots
+using ProgressMeter
 
 include("../src/rotation_matrix.jl")
 include("../src/fonctions_simu.jl")
 include("../src/permute_conditional.jl")
+include("../src/prec_xia.jl")
 include("../src/stat_test.jl")
 
 p         = 20 
@@ -48,18 +50,15 @@ p, n  = size(data)
 
 nblocks = length(levels(CategoricalArray(blocks)))
 
-# +
 # tests on rectangles
 pval_array = zeros(Float64,(2,p,p))
 corrected_pval = zeros(Float64, (p,p))
-seeds = round.(100000 * rand(rng, B))
-
-responsible_test = zeros(Float64, (p,p))
+responsible_test = Array{String,2}(undef,p,p)
 ntests_blocks = zeros(Float64,(p,p))
 zeromatrix = zeros(Float64,(p,p))
 B
-# -
 
+# +
 index = zeros(Int,(p,p))
 corrected_pval_temp = zeros(Float64,(p,p));
 
@@ -76,7 +75,7 @@ data_B1_array = Iterators.repeated(data_B1, B)
 iy = 1 # for iy in 1:(ix-1) # y coordinate starting point. stops before the diagonal
 ly = 0 # for ly in 0:(ix-iy-1) # length on y axis of the rectangle
 
-# # SECOND BLOCK block
+# SECOND BLOCK block
 
 index_y = iy:(iy+ly) # index second block
 points_y = findall( x -> x in index_y, blocks)
@@ -94,50 +93,73 @@ println("c:$index_complement")
 @show ncol = size(data_complement)[2]
 
 if ncol > 0
-    data_B1_perm = [permute_conditional(rng, B1, data_complement) for B1 in data_B1_array]
+    data_B1_perm = [permute_conditional(rng, B1, data_complement) for B1 in data_B1_array];
 else
-    data_B1_perm = [permute(B1,n) for B1 in data_B1_list]
+    data_B1_perm = [permute(B1,n) for B1 in data_B1_list];
 end
 
-# +
-testmatrix = zeromatrix
-testmatrix[points_x,points_y] = 1
-ntests_blocks = ntests_blocks + testmatrix
+testmatrix = zeros(Float64,(p,p))
+testmatrix[points_x,points_y] .= 1
+ntests_blocks .+= testmatrix
 
 heatmap(ntests_blocks, title="Blocks: $index_x - $index_y")
 heatmap(testmatrix,    title="Blocks: $index_x - $index_y")
+# -
 
 T0_tmp = stat_test(data_B1,data_B2,data,points_x,points_y)
 
-Tperm_tmp = []
-for k in 1:size(data_B1_perm)[3]
-    push!(Tperm_tmp,stat_test(data_B1_perm[:,:,k],data_B2, data, points_x, points_y))
+size(data_B1_perm[1])
+
+Tperm_tmp = zeros(Float64, B)
+@show size(data_B2)
+@show size(data)
+@showprogress 1 for i in eachindex(Tperm_tmp)
+    Tperm_tmp[i] = stat_test(data_B1_perm[i], data_B2, data, points_x, points_y)
 end
 
 pval_tmp = mean(Tperm_tmp .>= T0_tmp)
 
-corrected_pval_temp[points_x,points_y] = pval_tmp
-corrected_pval_temp[points_y,points_x] = pval_tmp # symmetrization
+corrected_pval_temp[points_x,points_y] .= pval_tmp
+corrected_pval_temp[points_y,points_x] .= pval_tmp # symetrization
 
+@show size(corrected_pval)
+@show size(corrected_pval_temp)
 # old adjusted p-value
 pval_array[1,:,:] .= corrected_pval 
 # p-value resulting from the test of this block
 pval_array[2,:,:] .= corrected_pval_temp 
-
+@show size(pval_array)
 # maximization for updating the adjusted p-value
-corrected_pval = maximum(pval_array,dims=1) 
+
+using RCall
+
+@rput pval_array
+
+result_R = rcopy(R"apply(pval_array, c(2,3), max)")
+
+result_jl = zeros((20,20))
+for i in 1:20, j in 1:20
+    result_jl[i,j] = max(corrected_pval[i,j], corrected_pval_temp[i,j])
+end
+result_jl ≈ result_R
 
 for i in 1:p, j in 1:p 
-    index[i,j] = findmax(A[:,i,j])[2] 
-end
-responsible_test[which(index==2)] = "$(index_x) - $(index_y)"
-
-            end
-        end
-    end
+    index[i,j] = findmax(pval_array[:,i,j])[2] 
 end
 
-=#
-# -
+index_R= rcopy(R"apply(pval_array, c(2,3), which.max)")
 
+index_R ≈ index
 
+@rput index_x
+@rput index_y
+
+R"paste0(paste0(index_x,collapse=','),'-',paste0(index_y,collapse=','))"
+
+responsible_test[ index .== 2] .= "$(paste(index_x))-$(paste(index_y))"
+
+# +
+#            end
+#        end
+#    end
+#end
