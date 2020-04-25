@@ -3,13 +3,15 @@ using Pkg
 pkg"add https://github.com/pnavaro/NCVREG.jl"
 
 using LinearAlgebra
+using NCVREG
+using Plots
 using Random
 using RCall
-using Plots
-using NCVREG
+using Statistics
+using PrecisionMatrix
 
 
-# somme les valeurs propres de l'inverse de la covariance de M1
+# # Code R (Madison)
 
 R"""
 library(spam)
@@ -45,7 +47,7 @@ fitted = apply(Y,2,SCADmod,x=Z,lambda=2*sqrt(var(Y[,1])*log(ncol(Z))/nrow(Z)))
 
 residuals = Y - fitted
 
-fitted + residuals[permutation,]
+res = fitted + residuals[permutation,]
 print(dim(res))
 M1 = cbind(res,X,Z)
 
@@ -60,35 +62,52 @@ image.plot(solve(cov(M1)),  asp=1, axes=F, legend.shrink=.4)
 @rget Y
 @rget Z
 
-row_y, col_y = size(Y)
-row_z, col_z = size(Z)
-fitted = zero(Y)
-for j in 1:col_y
-    y = Y[:,j]
-    λ = 2*sqrt(var(Y[:,1])*log(col_z)/row_z)
-    beta = NCVREG.coef(SCAD(Z, y, [λ]))  
-    fitted[:,j] .= vec(hcat(ones(row_z),Z) * beta)
+function permutation_conditional(permutation, Y, Z)
+    row_y, col_y = size(Y)
+    row_z, col_z = size(Z)
+    
+    @assert row_y == row_z
+    
+    fitted = similar(Y)
+    for j in 1:col_y
+        y = Y[:,j]
+        λ = 2*sqrt(var(Y[:,1])*log(col_z)/row_z)
+        beta = NCVREG.coef(SCAD(Z, y, [λ]))  
+        fitted[:,j] .= vec(hcat(ones(row_z),Z) * beta)
+    end
+    
+    residuals = Y .- fitted
+    
+    #permutation = randperm(rng, row_y)
+        
+    return fitted .+ residuals[permutation,:]
 end
 
-residuals = Y .- fitted
-    
-result_jl = fitted .+ residuals[permutation,:]
+M  = hcat(Y, X, Z)
+result_jl = permutation_conditional(permutation, Y, Z)
 M1 = hcat(result_jl, X, Z)
 
 M1 ≈ rcopy(M1)
 # -
 
 image = plot(layout=(1,2))
-heatmap!(image[1,1], inv(cov(M)), aspect_ratio=:equal, c=cgrad([:blue, :white,:red, :yellow]))
-heatmap!(image[1,2], inv(cov(M1)), aspect_ratio=:equal, c=cgrad([:blue, :white,:red, :yellow]))
+heatmap!(image[1,1], inv(cov(M)), aspect_ratio=:equal, c=cgrad([:white, :black]))
+heatmap!(image[1,2], inv(cov(M1)), aspect_ratio=:equal, c=cgrad([:white,:black ]))
 
 # # Intialize data with Julia
 
-# +
 rng = MersenneTwister(1111)
-
 n = 100
 Z = randn(rng, (n,5)) # data complement
 X = randn(rng, (n,3))
 Y = hcat( X * ones(3) .+ 0.1 .* randn(n), Z .+ 0.1 * randn(rng,(n,5)))
 M = hcat(Y,X,Z)
+permutation = randperm(n)
+result_jl = permutation_conditional(permutation, Y, Z)
+M1 = hcat(result_jl, X, Z)
+image = plot(layout=(1,2), axis=false, grid=false)
+heatmap!(image[1,1], inv(cov(M)), aspect_ratio=:equal, c=cgrad([:white, :black]), levels=4)
+heatmap!(image[1,2], inv(cov(M1)), aspect_ratio=:equal, c=cgrad([:white,:black ]), levels=4)
+
+
+
