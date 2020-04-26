@@ -70,9 +70,11 @@ function prec_xia!( Tprec, TprecStd, X :: Array{Float64, 2} )
         y .= X[:, k]
         λ = [2*sqrt(var(y)*log(p)/n)]
         fitreg = glmnet(x, y, lambda = λ, standardize=false)
-        betahat[:,k] .= vec(fitreg.betas)
         y .= vec(GLMNet.predict(fitreg,x))
-        reshat[:,k]  .= view(X, :, k) .- y
+        betahat[:,k] .= vec(fitreg.betas)
+        for i in eachindex(y)
+           reshat[i,k] = X[i, k] - y[i]
+        end
     end
     
     rtilde = cov(reshat) .* (n-1) ./ n
