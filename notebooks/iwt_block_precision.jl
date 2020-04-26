@@ -6,20 +6,20 @@ using Distributions
 using GLMNet
 using InvertedIndices
 using NCVREG
-using ProgressMeter
 using InvertedIndices
 using Statistics
 using UnicodePlots
 
 
-function RotationMatrix(p :: Int64)
+# +
+function RotationMatrix(rng, p :: Int64)
 
     if p == 1 return 1.0*Matrix(I,1,1) end
 
     P = zeros(Float64, (p,p)) 
 
     if p == 2
-        u = rand()
+        u = rand(rng)
         sqrt_1_u2 = sqrt(1 - u*u)
         P[1,1] = sqrt_1_u2;    # P[0, 0] = sqrt(1 - u^2) = cos(theta)
         P[2,1] = u;            # P[1, 0] = u = sin(theta)
@@ -52,6 +52,7 @@ function RotationMatrix(p :: Int64)
 
 end
 
+# +
 """
     structure_cov(p, blocs_on; b = 10, seed = p)
 
@@ -96,6 +97,7 @@ function structure_cov(rng :: AbstractRNG,
 end
 
 
+# +
 """
     cov_simu(blocs, indblocs, blocs_on, D)
 
@@ -105,7 +107,7 @@ end
   - blocs_on  : liste des indices des couples de blocs "allumes"
   - D        : vecteur des valeurs propres de la matrice a simuler
 """
-function cov_simu(blocs, indblocs, blocs_on, D)
+function cov_simu(rng, blocs, indblocs, blocs_on, D)
   
   b = length(blocs) - 1
   p = sum(map(length,indblocs))
@@ -116,12 +118,12 @@ function cov_simu(blocs, indblocs, blocs_on, D)
       B1 = indblocs[blocs_on[i][1]]
       B2 = indblocs[blocs_on[i][2]]
       nB = length(B1) + length(B2)
-      P[[B1..., B2...], [B1..., B2...]] .= RotationMatrix(nB)
+      P[[B1..., B2...], [B1..., B2...]] .= RotationMatrix(rng, nB)
   end
   
   # matrices de rotation pour les autre blocs centraux (non allumes)
   for i in setdiff(1:b, Iterators.flatten(blocs_on))
-      P[indblocs[i], indblocs[i]] .= RotationMatrix(length(indblocs[i]))
+      P[indblocs[i], indblocs[i]] .= RotationMatrix(rng, length(indblocs[i]))
   end
   
   for i in 1:length(blocs_on)
@@ -148,7 +150,7 @@ function generate_data(rng, p, n, b, blocs_on )
 
     D = rand(rng, Uniform(1e-4, 1e-2), p)
 
-    covmat, premat   = cov_simu(blocs, indblocs, blocs_on, D)
+    covmat, premat = cov_simu(rng, blocs, indblocs, blocs_on, D)
     
     d = MvNormal(covmat)
     p_part = map( length,  indblocs)
@@ -158,7 +160,6 @@ function generate_data(rng, p, n, b, blocs_on )
 
 end
 
-# -
 
 
 # +
@@ -259,9 +260,9 @@ function iwt_block_precision(data, blocks; B=1000)
     index = zeros(Int,(p,p))
     corrected_pval_temp = zeros(Float64,(p,p))
     Tperm_tmp = zeros(Float64, B)
-
+    
     # x coordinate starting point and length on x axis of the rectangle
-    @showprogress 1 for ix in 2:nblocks, lx in 0:(nblocks-ix)
+    for ix in 2:nblocks, lx in 0:(nblocks-ix)
 
         # FIRST BLOCK
 
@@ -295,8 +296,10 @@ function iwt_block_precision(data, blocks; B=1000)
             testmatrix[points_x,points_y] .= 1
             ntests_blocks .+= testmatrix
 
-            heatmap(ntests_blocks, title="Blocks: $index_x - $index_y")
-            heatmap(testmatrix,    title="Blocks: $index_x - $index_y")
+            plt = heatmap(ntests_blocks, title="Blocks: $index_x - $index_y")
+            display(plt)
+            plt = heatmap(testmatrix,    title="Blocks: $index_x - $index_y")
+            display(plt)
             
             T0_tmp = stat_test(data_B1,data_B2,data,points_x,points_y)
 
@@ -341,9 +344,11 @@ blocs_on  = [[1,3]]
 
 covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
-heatmap(covmat)
+plt = heatmap(covmat)
+display(plt)
 
-heatmap(premat)
+plt = heatmap(premat)
+display(plt)
 
 @show blocks
 
