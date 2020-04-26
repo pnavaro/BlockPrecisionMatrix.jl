@@ -142,13 +142,11 @@ permute.conditional = function(y,n,data.complement,estimation){
 # adjusted p-value, the maximization is done at the end of each loop.
 # It would also be possible to save all the results of each loop instead (in an array) and do the maximization only once at the end.
 
-# +
 # tests on rectangles
 pval_array = array(dim=c(2,p,p))
 corrected.pval = matrix(0,nrow=p,ncol=p)
 responsible.test = matrix(nrow=p,ncol=p)
 ntests.blocks = zeromatrix = matrix(0,nrow=p,ncol=p)
-# -
 tic()
 for(ix in 2:nblocks){ # x coordinate starting point.
   for(lx in 0:(nblocks-ix)){ # length on x axis of the rectangle
@@ -231,3 +229,5 @@ responsible.test
 corrected.pval
 
 ntests.blocks
+
+
