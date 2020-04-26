@@ -35,8 +35,9 @@ end
 Permutation
 
 """
-permute(x :: Array{Float64, 2}, n) = x[randperm(n), :] 
-
+function permute(rng, x :: Array{Float64, 2}, n) 
+   x[randperm(rng, n), :] 
+end
 
 export permute_conditional
 

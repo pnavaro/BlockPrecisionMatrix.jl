@@ -3,6 +3,7 @@ rm(list=ls())
 library(repr)
 options(repr.plot.width=4, repr.plot.height=3)
 
+library(glmnet)
 library(mvtnorm)
 library(fields)
 library(parallel)
@@ -12,7 +13,6 @@ library(ncvreg)
 library(tictoc)
 
 source(here('R','FonctionsSimu.R'));
-#source('~/Dropbox/code_BlockCovarianceTest/blocks_loop.R', echo = TRUE)
 source(here('R','Precision_IWT_function.R'), echo=TRUE);
 source(here('R','utilities.R'), echo = TRUE);
 
@@ -30,11 +30,10 @@ image.plot(resmat$CovMat)
 image.plot(resmat$PreMat)
 
 data    = rmvnorm(n, rep(0, p), sigma = resmat$CovMat)
-p.part     = sapply(1:length(resBlocs$indblocs), function(i) length(resBlocs$indblocs[[i]]))
-(blocks     = rep(1:b, p.part))
+p.part  = sapply(1:length(resBlocs$indblocs), function(i) length(resBlocs$indblocs[[i]]))
+blocks  = rep(1:b, p.part)
 
 # +
-library(glmnet)
 
 PrecXia = function(X){
   n = nrow(X)
@@ -147,8 +146,6 @@ permute.conditional = function(y,n,data.complement,estimation){
 # tests on rectangles
 pval_array = array(dim=c(2,p,p))
 corrected.pval = matrix(0,nrow=p,ncol=p)
-seeds = round(runif(B,0,1000000))
-
 responsible.test = matrix(nrow=p,ncol=p)
 ntests.blocks = zeromatrix = matrix(0,nrow=p,ncol=p)
 # -
@@ -170,9 +167,15 @@ for(ix in 2:nblocks){ # x coordinate starting point.
         points.y = which(blocks %in% index.y)
         data.B2 = data[,points.y]
 
+        print(paste0("index.x=", paste0(index.x,collapse=",")))
+        print(paste0("index.y=", paste0(index.y,collapse=",")))
+        print(paste0("nblocks=", nblocks))
         index.complement = (1:nblocks)[-c(index.x,index.y)]
+        print(paste0("index.complement=", index.complement))
         points.complement = which(blocks %in% index.complement)
+        print(paste0("points.complement=", points.complement))
         data.complement = data[,points.complement]
+        print(paste0("dim data.complement=",dim(data.complement)))
 
         # print(paste0('x:',index.x))
         # print(paste0('y:',index.y))
@@ -228,5 +231,3 @@ responsible.test
 corrected.pval
 
 ntests.blocks
-
-

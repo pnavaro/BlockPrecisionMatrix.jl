@@ -10,3 +10,4 @@ profile.html
 Rplots.pdf
 .Rhistory
 Manifest.toml
+*.mem
