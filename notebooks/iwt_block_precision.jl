@@ -39,7 +39,7 @@ function iwt_block_precision(rng, data, blocks; B=1000)
 
         index_x = ix:(ix+lx) # index first block
         points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
-        data_B1 = data[:,points_x] # data of the first block
+        data_B1 = view(data,:,points_x) # data of the first block
         data_B1_array = Iterators.repeated(data_B1, B)
 
         # y coordinate starting point. stops before the diagonal and length on y axis of the rectangle
@@ -49,8 +49,8 @@ function iwt_block_precision(rng, data, blocks; B=1000)
 
             index_y = iy:(iy+ly) # index second block
             points_y = findall( x -> x in index_y, blocks)
-            data_B2 = data[:,points_y]
-            index_complement = collect(filter(index -> !(index in vcat(index_x,index_y)), 1:nblocks))
+            data_B2 = view(data,:,points_y)
+            index_complement = filter(index -> !(index in vcat(index_x,index_y)), 1:nblocks)
             points_complement = findall( x -> x in index_complement, blocks)
             data_complement = data[:,points_complement]
 
