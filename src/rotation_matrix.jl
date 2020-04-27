@@ -1,13 +1,15 @@
 using Random, LinearAlgebra
 
-function RotationMatrix(p :: Int64)
+export rotation_matrix
 
-    if p == 1 return 1.0*Matrix(I,1,1) end
+function rotation_matrix(rng, p :: Int64)
+
+    if p == 1 return (1.0 .* Matrix(I,1,1)) end
 
     P = zeros(Float64, (p,p)) 
 
     if p == 2
-        u = rand()
+        u = rand(rng)
         sqrt_1_u2 = sqrt(1 - u*u)
         P[1,1] = sqrt_1_u2;    # P[0, 0] = sqrt(1 - u^2) = cos(theta)
         P[2,1] = u;            # P[1, 0] = u = sin(theta)
@@ -16,7 +18,7 @@ function RotationMatrix(p :: Int64)
         return P
     end
 
-    Q, R = qr(rand(p, p))
+    Q, R = qr(rand(rng, p, p))
     P = collect(Q)
 
     if p % 2 == 0

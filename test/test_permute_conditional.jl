@@ -1,5 +1,7 @@
 @testset "Permutation" begin
 
+    import PrecisionMatrix: permute_scad
+
     rng = MersenneTwister(111)
 
     n = 100
@@ -8,7 +10,7 @@
     Y = hcat( X * ones(3) .+ 0.1 .* randn(n), Z .+ 0.1 * randn(rng,(n,5)))
     M = hcat(Y,X,Z)
     
-    result = permute_conditional(rng, Y, Z)
+    result = permute_scad(rng, Y, Z)
     M1 = hcat(result, X, Z)
     
     @show sum(eigen(inv(cov(M1))).values) # [1] 31.91363
