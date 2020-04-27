@@ -14,7 +14,7 @@ using UnicodePlots
 # +
 function RotationMatrix(rng, p :: Int64)
 
-    if p == 1 return 1.0*Matrix(I,1,1) end
+    if p == 1 return (1.0 .* Matrix(I,1,1)) end
 
     P = zeros(Float64, (p,p)) 
 
@@ -28,7 +28,7 @@ function RotationMatrix(rng, p :: Int64)
         return P
     end
 
-    Q, R = qr(rand(p, p))
+    Q, R = qr(rand(rng, p, p))
     P = collect(Q)
 
     if p % 2 == 0
@@ -296,10 +296,8 @@ function iwt_block_precision(data, blocks; B=1000)
             testmatrix[points_x,points_y] .= 1
             ntests_blocks .+= testmatrix
 
-            plt = heatmap(ntests_blocks, title="Blocks: $index_x - $index_y")
-            display(plt)
-            plt = heatmap(testmatrix,    title="Blocks: $index_x - $index_y")
-            display(plt)
+            display(heatmap(ntests_blocks, title="Blocks: $index_x - $index_y"))
+            display(heatmap(testmatrix,    title="Blocks: $index_x - $index_y"))
             
             T0_tmp = stat_test(data_B1,data_B2,data,points_x,points_y)
 
@@ -334,26 +332,29 @@ function iwt_block_precision(data, blocks; B=1000)
     end
     
     corrected_pval
+
 end
 
-p = 20 
-n = 1000
-b = 5
-rng = MersenneTwister(42)
+p = 10 
+n = 500
+b = 3
+rng = MersenneTwister(12)
 blocs_on  = [[1,3]]
 
 covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
-plt = heatmap(covmat)
-display(plt)
 
-plt = heatmap(premat)
-display(plt)
+display(heatmap(covmat, title="covmat"))
+display(heatmap(premat, title="premat"))
 
 @show blocks
 
 @time res = iwt_block_precision(data, blocks; B=1000)
 
-heatmap(res)
+display(heatmap(res, height=30, width=30))
 
+println(res)
 
+@show covmat
+
+@show premat
