@@ -1,7 +1,6 @@
 module PrecisionMatrix
 
 using LinearAlgebra
-using NCVREG
 using Random
 using Statistics
 
