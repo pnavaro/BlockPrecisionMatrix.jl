@@ -1,6 +1,37 @@
-# using GLMNet
 using Lasso
 using InvertedIndices
+
+struct StatTest
+
+    n :: Int
+    p :: Int
+    Tprec :: Array{Float64, 2}
+    TprecStd :: Array{Float64, 2}
+    β̂ :: Array{Float64, 2}
+    reshat :: Array{Float64, 2}
+    y :: Vector{Float64}
+    r̂ :: Array{Float64, 2}
+    r̃ :: Array{Float64, 2}
+
+    function StatTest( n, p)
+
+        Tprec = zeros(p, p)
+        TprecStd = zeros(p, p)
+
+        β̂ = zeros(Float64,(p-1,p))
+        reshat  = zeros(Float64, (n,p))
+        y = zeros(Float64, n)
+        d = Normal()
+        l = canonicallink(d)
+        r̂ = zeros(Float64, (p,p))
+        r̃ = zeros(Float64, (p,p))
+
+        new( n, p, Tprec, TprecStd, β̂, reshat, y, r̂, r̃)
+
+    end
+    
+
+end
 
 """
     stat_test(block1_perm, block2, data_orig, points_x, points_y)
@@ -8,68 +39,57 @@ using InvertedIndices
 We use the Xia estimator for the precision matrix
 
 """
-function stat_test(block1_perm, block2, X, points_x, points_y)
+function (self :: StatTest)(block1_perm, block2, X, points_x, points_y)
     
     X[:, points_x] .= block1_perm
 
     n, p = size(X)
-    Tprec = zeros(p, p)
-    TprecStd = zeros(p, p)
 
-    β̂ = zeros(Float64,(p-1,p))
-    reshat  = copy(X)
-    y = zeros(Float64, n)
     d = Normal()
     l = canonicallink(d)
     
     @inbounds for k in 1:p
         x = view(X, :, Not(k))
-        for i in eachindex(y)
-           y[i] = X[i, k]
+        for i in eachindex(self.y)
+           self.y[i] = X[i, k]
         end
-        λ = [2*sqrt(var(y)*log(p)/n)]
+        λ = [2*sqrt(var(self.y)*log(p)/n)]
 
-        # GLMNet 
-        # fitreg = glmnet(x, y, lambda = λ, standardize=false)
-        # y .= vec(GLMNet.predict(fitreg,x))
-        # β̂[:,k] .= vec(fitreg.betas)
+        fitreg = Lasso.fit(LassoPath, x, self.y, d, l, λ = λ, standardize=false)
+        self.y .= vec(Lasso.predict(fitreg, x))
+        self.β̂[:,k] .= vec(fitreg.coefs)
 
-        # Lasso.jl
-        fitreg = Lasso.fit(LassoPath, x, y, d, l, λ = λ, standardize=false)
-        y .= vec(Lasso.predict(fitreg, x))
-        β̂[:,k] .= vec(fitreg.coefs)
-
-        for i in eachindex(y)
-           reshat[i,k] = X[i, k] - y[i]
+        for i in eachindex(self.y)
+           self.reshat[i,k] = X[i, k] - self.y[i]
         end
 
     end
     
-    r̃ = cov(reshat) .* (n-1) ./ n
-    r̂   = r̃
+    self.r̃ .= cov(self.reshat) .* (n-1) ./ n
+    self.r̂ .= self.r̃
     
     @inbounds for i in 1:p-1
         for j in (i+1):p
-            r̂[i,j] = -(r̃[i,j]+r̃[i,i]*β̂[i,j]+r̃[j,j]*β̂[j-1,i])
-            r̂[j,i] = r̂[i,j]
+            self.r̂[i,j] = -(self.r̃[i,j]+self.r̃[i,i]*self.β̂[i,j]+self.r̃[j,j]*self.β̂[j-1,i])
+            self.r̂[j,i] = self.r̂[i,j]
         end
     end
     
-    @inbounds for i in eachindex(Tprec, r̂)
-        Tprec[i] = 1 / r̂[i]
+    @inbounds for i in eachindex(self.Tprec, self.r̂)
+        self.Tprec[i] = 1 / self.r̂[i]
     end
 
-    TprecStd .= Tprec
+    self.TprecStd .= self.Tprec
 
     @inbounds for i in 1:(p-1)
         for j in (i+1):p
-            Tprec[i,j] = Tprec[j,i] = r̂[i,j]/(r̂[i,i]*r̂[j,j])
-            thetahatij = (1+(β̂[i,j]^2  * r̂[i,i]/r̂[j,j]))/(n*r̂[i,i]*r̂[j,j])   
-            TprecStd[i,j] = TprecStd[j,i] = Tprec[i,j]/sqrt(thetahatij)
+            self.Tprec[i,j] = self.Tprec[j,i] = self.r̂[i,j]/(self.r̂[i,i]*self.r̂[j,j])
+            thetahatij = (1+(self.β̂[i,j]^2  * self.r̂[i,i]/self.r̂[j,j]))/(n*self.r̂[i,i]*self.r̂[j,j])   
+            self.TprecStd[i,j] = self.TprecStd[j,i] = self.Tprec[i,j]/sqrt(thetahatij)
         end
     end
 
-    submat = TprecStd[points_x, points_y]
+    submat = view(self.TprecStd,points_x, points_y)
     return sum(submat).^2
     
 end

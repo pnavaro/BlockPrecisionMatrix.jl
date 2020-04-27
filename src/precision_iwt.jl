@@ -25,6 +25,8 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
     index = zeros(Int,(p,p))
     corrected_pval_temp = zeros(Float64,(p,p))
     Tperm_tmp = zeros(Float64, B)
+
+    stat_test = StatTest(n, p)
     
     # x coordinate starting point and length on x axis of the rectangle
     for ix in 2:nblocks, lx in 0:(nblocks-ix)
