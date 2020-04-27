@@ -26,11 +26,12 @@ function iwt_block_precision(rng, data, blocks; B=1000)
     corrected_pval = zeros(Float64, (p,p))
     responsible_test = Array{String,2}(undef,p,p)
     ntests_blocks = zeros(Float64,(p,p))
-    zeromatrix = zeros(Float64,(p,p))
     testmatrix = zeros(Float64,(p,p))
     index = zeros(Int,(p,p))
     corrected_pval_temp = zeros(Float64,(p,p))
     Tperm_tmp = zeros(Float64, B)
+
+    stat_test = StatTest(n, p)
     
     # x coordinate starting point and length on x axis of the rectangle
     for ix in 2:nblocks, lx in 0:(nblocks-ix)
