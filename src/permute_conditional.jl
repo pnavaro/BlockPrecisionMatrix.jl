@@ -1,3 +1,5 @@
+import NCVREG
+
 """ 
     permute(x, n) 
 

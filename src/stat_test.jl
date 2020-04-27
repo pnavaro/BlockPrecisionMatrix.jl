@@ -1,4 +1,5 @@
-using GLMNet
+# using GLMNet
+using Lasso
 using InvertedIndices
 
 """
@@ -18,6 +19,8 @@ function stat_test(block1_perm, block2, X, points_x, points_y)
     β̂ = zeros(Float64,(p-1,p))
     reshat  = copy(X)
     y = zeros(Float64, n)
+    d = Normal()
+    l = canonicallink(d)
     
     @inbounds for k in 1:p
         x = view(X, :, Not(k))
@@ -25,12 +28,21 @@ function stat_test(block1_perm, block2, X, points_x, points_y)
            y[i] = X[i, k]
         end
         λ = [2*sqrt(var(y)*log(p)/n)]
-        fitreg = glmnet(x, y, lambda = λ, standardize=false)
-        y .= vec(GLMNet.predict(fitreg,x))
-        β̂[:,k] .= vec(fitreg.betas)
+
+        # GLMNet 
+        # fitreg = glmnet(x, y, lambda = λ, standardize=false)
+        # y .= vec(GLMNet.predict(fitreg,x))
+        # β̂[:,k] .= vec(fitreg.betas)
+
+        # Lasso.jl
+        fitreg = Lasso.fit(LassoPath, x, y, d, l, λ = λ, standardize=false)
+        y .= vec(Lasso.predict(fitreg, x))
+        β̂[:,k] .= vec(fitreg.coefs)
+
         for i in eachindex(y)
            reshat[i,k] = X[i, k] - y[i]
         end
+
     end
     
     r̃ = cov(reshat) .* (n-1) ./ n
