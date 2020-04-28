@@ -26,8 +26,8 @@ function iwt_block_precision(data, blocks; B=1000)
     pval_array = zeros(Float64,(2,p,p))
     corrected_pval = zeros(Float64, (p,p))
     responsible_test = Array{String,2}(undef,p,p)
-    ntests_blocks = zeros(Float64,(p,p))
-    testmatrix = zeros(Float64,(p,p))
+    ntests_blocks = zeros(Int,(p,p))
+    testmatrix = zeros(Int,(p,p))
     index = zeros(Int,(p,p))
     corrected_pval_temp = zeros(Float64,(p,p))
     Tperm_tmp = zeros(Float64, B)
@@ -63,9 +63,9 @@ function iwt_block_precision(data, blocks; B=1000)
             # permuted data of the first block
             ncol = size(data_complement)[2]
 
-            fill!(testmatrix, 0.0) 
-            testmatrix[points_x,points_y] .= 1
-            ntests_blocks .= max.(ntests_blocks, testmatrix)
+            fill!(testmatrix, 0) 
+            testmatrix[points_x,points_y] .+= 1
+            ntests_blocks .+= testmatrix
 
             display(heatmap(testmatrix,    title="Blocks: $index_x - $index_y"))
             display(heatmap(ntests_blocks, title="Blocks: $index_x - $index_y"))
