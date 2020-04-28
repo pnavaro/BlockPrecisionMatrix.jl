@@ -1,6 +1,6 @@
 @testset "random rotation matrix" begin
 
-    import PrecisionMatrix: RotationMatrix
+    import PrecisionMatrix: rotation_matrix
     using Random
 
     rng = MersenneTwister(123)

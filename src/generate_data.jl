@@ -1,3 +1,5 @@
+using ReadOnlyArrays
+
 """
     generate_data(rng, p, n, b, blocs_on )
 
@@ -36,7 +38,7 @@ function generate_data(rng, p, n, b, blocs_on )
     p_part = map( length,  indblocs)
     blocks  = vcat([repeat([i], j) for (i,j) in zip(1:b, p_part)]...)
     data = rand!(rng, d, zeros(Float64,(p, n)))
-    covmat, premat, transpose(data), blocks
+    covmat, premat, ReadOnlyArray(transpose(data)), blocks
 
 end
 
