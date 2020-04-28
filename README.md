@@ -1,19 +1,8 @@
 # PrecisionMatrix
 
 
-## Run the R code
-
-  - Install packages dependencies
-
 ```bash
-Rscript install.R
-Rscript  TestsOptimisation.R
-```
-
-## Run the Julia code
-
-```bash
-git clone https://github.com/MarieMorvan/PrecisionMatrix.git
+git clone https://github.com/pnavaro/PrecisionMatrix.git
 cd PrecisionMatrix
 julia --project
 ```
