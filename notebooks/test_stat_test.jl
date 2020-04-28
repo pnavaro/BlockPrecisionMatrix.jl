@@ -1,5 +1,6 @@
 using Random
 using RCall
+using Test
 
 ref = R"""
 rm(list=ls())
