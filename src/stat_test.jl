@@ -1,3 +1,4 @@
+# using GLMNet
 using Lasso
 using InvertedIndices
 
@@ -8,6 +9,7 @@ struct StatTest
     Tprec :: Array{Float64, 2}
     TprecStd :: Array{Float64, 2}
     β̂ :: Array{Float64, 2}
+    Xhat :: Array{Float64, 2}
     reshat :: Array{Float64, 2}
     y :: Vector{Float64}
     r̂ :: Array{Float64, 2}
@@ -19,6 +21,7 @@ struct StatTest
         TprecStd = zeros(p, p)
 
         β̂ = zeros(Float64,(p-1,p))
+        Xhat    = zeros(Float64, (n,p))
         reshat  = zeros(Float64, (n,p))
         y = zeros(Float64, n)
         d = Normal()
@@ -26,7 +29,7 @@ struct StatTest
         r̂ = zeros(Float64, (p,p))
         r̃ = zeros(Float64, (p,p))
 
-        new( n, p, Tprec, TprecStd, β̂, reshat, y, r̂, r̃)
+        new( n, p, Tprec, TprecStd, β̂, Xhat, reshat, y, r̂, r̃)
 
     end
     
@@ -34,14 +37,20 @@ struct StatTest
 end
 
 """
-    stat_test(block1_perm, block2, data_orig, points_x, points_y)
+    stat_test(block1_perm, data_orig, points_x, points_y)
 
 We use the Xia estimator for the precision matrix
 
 """
-function (self :: StatTest)(block1_perm, block2, X, points_x, points_y)
+function (self :: StatTest)(block1_perm, X, points_x, points_y)
     
-    X[:, points_x] .= block1_perm
+    for i in eachindex(self.Xhat)
+        self.Xhat[i] = X[i]
+    end
+
+    for j in eachindex(points_x), i in 1:self.n
+        self.Xhat[i, points_x[j]] = block1_perm[i, j]
+    end
 
     n, p = size(X)
 
@@ -49,18 +58,24 @@ function (self :: StatTest)(block1_perm, block2, X, points_x, points_y)
     l = canonicallink(d)
     
     @inbounds for k in 1:p
-        x = view(X, :, Not(k))
+        x = view(self.Xhat, :, Not(k))
         for i in eachindex(self.y)
-           self.y[i] = X[i, k]
+           self.y[i] = self.Xhat[i, k]
         end
         λ = [2*sqrt(var(self.y)*log(p)/n)]
 
+        # GLMNet 
+        # fitreg = glmnet(x, self.y, lambda = λ, standardize=false)
+        # self.y .= vec(GLMNet.predict(fitreg,x))
+        # self.β̂[:,k] .= vec(fitreg.betas)
+
+        # Lasso.jl
         fitreg = Lasso.fit(LassoPath, x, self.y, d, l, λ = λ, standardize=false)
         self.y .= vec(Lasso.predict(fitreg, x))
         self.β̂[:,k] .= vec(fitreg.coefs)
 
         for i in eachindex(self.y)
-           self.reshat[i,k] = X[i, k] - self.y[i]
+           self.reshat[i,k] = self.Xhat[i, k] - self.y[i]
         end
 
     end
