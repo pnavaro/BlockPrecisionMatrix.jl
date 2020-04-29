@@ -19,6 +19,7 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
     Tperm = zeros(Float64, B)
 
     stat_test = StatTest(n, p)
+    permutation = randperm(rng, n)
     
     # x coordinate starting point and length on x axis of the rectangle
     for ix in 2:nblocks, lx in 0:(nblocks-ix)
@@ -28,6 +29,8 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
         points_x = findall(x -> x in index_x, blocks) # coefficients in block index.x
 
         data_B1 = view(data,:,points_x) # data of the first block
+        data_B1_perm = copy(data[:, points_x])
+        residuals = similar(data_B1_perm)
 
         # y coordinate starting point. stops before the diagonal and length on y axis of the rectangle
         for iy in 1:(ix-1), ly in 0:(ix-iy-1)
@@ -37,7 +40,7 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
             index_y = iy:(iy+ly) # index second block
             points_y = findall( x -> x in index_y, blocks)
 
-            data_B2 = view(data,:,points_y) # data of the second block
+            # data_B2 = view(data,:,points_y) # data of the second block
 
             # COMPLEMENT
 
@@ -51,13 +54,33 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
 
             T0 = stat_test(data_B1, data, points_x, points_y)
 
+            ZZ = hcat(ones(n), data_complement)
+
             for i in eachindex(Tperm)
+
+                permutation .= randperm(rng, n)
+
                 if ncol > 0
-                    data_B1_perm = permute_scad(rng, data_B1, data_complement)
+
+                    for j in 1:length(points_x)
+                        y = view(data_B1,:,j)
+                        λ = 2*sqrt(var(view(data_B1,:,1))*log(length(points_complement))/n)
+                        β = NCVREG.coef(NCVREG.SCAD(data_complement, y, [λ]))
+                        data_B1_perm[:,j] .= vec(ZZ * β)
+                    end
+                    
+                    residuals .= data_B1 .- data_B1_perm
+                    
+                    data_B1_perm .+= view(residuals, permutation, :)
+                        
                 else
-                    data_B1_perm = permute(rng, data_B1, n)
+
+                    data_B1_perm .= data[permutation, points_x]
+
                 end
+
                 Tperm[i] = stat_test(data_B1_perm, data, points_x, points_y)
+
             end
 
             pval = mean(Tperm .>= T0)
