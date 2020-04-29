@@ -9,7 +9,6 @@ using NCVREG
 using InvertedIndices
 using Statistics
 using UnicodePlots
-import Base.Threads: threadid, nthreads, @sync, @spawn
 
 include("../src/rotation_matrix.jl")
 include("../src/structure_cov.jl")
