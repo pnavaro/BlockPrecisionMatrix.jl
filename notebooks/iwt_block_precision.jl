@@ -33,8 +33,6 @@ function iwt_block_precision(data, blocks; B=1000)
 
     stat_test = StatTest(n, p)
 
-    rngs = [MersenneTwister(i) for i in 1:nthreads()]
-    
     # x coordinate starting point and length on x axis of the rectangle
     for ix in 2:nblocks, lx in 0:(nblocks-ix)
 
