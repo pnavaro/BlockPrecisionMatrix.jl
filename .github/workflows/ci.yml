@@ -38,6 +38,7 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Pkg
+            Pkg.add("https://github.com/pnavaro/NCVREG.jl")
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - run: julia --project=docs docs/make.jl

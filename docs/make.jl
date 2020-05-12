@@ -4,14 +4,16 @@ using Documenter
 using PrecisionMatrix
 
 makedocs(
+    repo="https://github.com/pnavaro/PrecisionMatrix/blob/{commit}{path}#L{line}",
     sitename = "PrecisionMatrix",
-    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
-    modules = [PrecisionMatrix]
+    format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
+        canonical="https://pnavaro.github.io/PrecisionMatrix"),
+    modules = [PrecisionMatrix],
+    pages=[
+        "Home" => "index.md",
+    ]
 )
 
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(;
+    repo="github.com/pnavaro/PrecisionMatrix",
+)
