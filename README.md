@@ -1,6 +1,7 @@
 # PrecisionMatrix
 
 ![CI](https://github.com/pnavaro/PrecisionMatrix/workflows/CI/badge.svg)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://pnavaro.github.io/PrecisionMatrix/dev)
 
 ```bash
 git clone https://github.com/pnavaro/PrecisionMatrix.git
