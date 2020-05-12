@@ -25,7 +25,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - run: julia --project -e 'using Pkg; Pkg.add("https://github.com/pnavaro/NCVREG.jl")'
+      - run: julia --project -e 'using Pkg; Pkg.add(Pkg.add(PackageSpec(url="https://github.com/pnavaro/NCVREG.jl")))'
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
   docs:
