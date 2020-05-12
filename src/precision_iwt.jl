@@ -20,7 +20,7 @@ function index_blocks(blocks)
 
 end
 
-function compute_pval!(pval, rng :: AbstractRNG, data, 
+function compute_pval(rng :: AbstractRNG, data, 
                         stat_test, blocks, index_x, index_y; b = 1000)
     
     n, p = size(data)
@@ -70,14 +70,8 @@ function compute_pval!(pval, rng :: AbstractRNG, data,
 
     end
 
-    pvalue = mean(tperm .>= t0)
+    return mean(tperm .>= t0)
 
-    for i in points_x, j in points_y
-        pval[i,j] = max(pval[i,j], pvalue)
-        pval[j,i] = pval[i,j]
-    end
-
-    pval
 
 end
 
@@ -103,7 +97,15 @@ function iwt_block_precision(rng :: AbstractRNG, data, blocks; B=1000)
     
     for (index_x, index_y) in index_xy
 
-        compute_pval!(pval, rng, data, stat_test, blocks, index_x, index_y)
+        pvalue = compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+
+        points_x = findall(x -> x in index_x, blocks)
+        points_y = findall(x -> x in index_y, blocks)
+
+        for i in points_x, j in points_y
+            pval[i,j] = max(pval[i,j], pvalue)
+            pval[j,i] = pval[i,j]
+        end
 
     end
     
