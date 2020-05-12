@@ -6,59 +6,78 @@ if nworkers() != 4
    addprocs(4); # add worker processes
 end
 
-include("../src/rotation_matrix.jl")
-include("../src/structure_cov.jl")
-include("../src/cov_simu.jl")
-include("../src/generate_data.jl")
-include("../src/stat_test.jl")
-include("../src/permute_conditional.jl")
-include("../src/precision_iwt.jl")
+@everywhere using CategoricalArrays
+@everywhere using SharedArrays
+
+include(joinpath(@__DIR__, "../src/rotation_matrix.jl"))
+include(joinpath(@__DIR__, "../src/structure_cov.jl"))
+include(joinpath(@__DIR__, "../src/cov_simu.jl"))
+include(joinpath(@__DIR__, "../src/generate_data.jl"))
+include(joinpath(@__DIR__, "../src/stat_test.jl"))
+include(joinpath(@__DIR__, "../src/permute_conditional.jl"))
+
+@everywhere include(joinpath(@__DIR__, "../src/precision_iwt.jl"))
 
 
 p = 20 
 n = 1000
-b = 3
+b = 5
 rng = MersenneTwister(12)
 blocs_on  = [[1,3]]
 
 covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
+# shared_data = SharedMatrix(collect(data))
+
 display(heatmap(covmat, title="covmat"))
 display(heatmap(premat, title="premat"))
 
-pval = iwt_block_precision(rng, data, blocks; B=1000)
-
-display(heatmap(pval, title="pval"))
-
-const block_tests = RemoteChannel(()->Channel{Int}(32));
-
+const block_tests = RemoteChannel(()->Channel{Tuple}(32));
 const results = RemoteChannel(()->Channel{Tuple}(32));
 
 @everywhere function do_work(jobs, results) 
+
     while true
-        job_id = take!(jobs)
-        exec_time = rand()
-        sleep(exec_time) # simulates elapsed time doing actual work
-        put!(results, (job_id, exec_time, myid()))
+        blocks, ix, iy = take!(jobs)
+        px = findall(x -> x in ix, blocks) # coefficients in block index.x
+        py = findall(x -> x in iy, blocks)
+        nblocks = length(levels(CategoricalArray(blocks)))
+        iz = filter(i -> !(i in vcat(ix,iy)), 1:nblocks)
+        pz = findall( x -> x in iz, blocks)
+
+        # n, p = size(shared_data)
+        # stat_test = StatTest(n, p)
+        # rng = MersenneTwister(myid())
+
+        # compute_pval!(pval, rng, shared_data, stat_test, blocks, ix, iy)
+
+        put!(results, (px, py, pz))
     end
 end
 
-function make_tests(n)
-    for i in 1:n
-        put!(block_tests, i)
+index_xy = index_blocks(blocks)
+n = length(index_xy)
+
+function make_tests(index_xy, blocks)
+    for (ix, iy) in index_xy
+        put!(block_tests, (blocks, ix, iy))
     end
 end
 
-n = 12
-
-@async make_tests(n); # feed the jobs channel with "n" jobs
+@async make_tests(index_xy, blocks)
 
 for p in workers() 
     remote_do(do_work, p, block_tests, results)
 end
 
-@elapsed while n > 0 # print out results
-    job_id, exec_time, where = take!(results)
-    println("$job_id finished in $(round(exec_time; digits=2)) seconds on worker $where")
+while n > 0 # print out results
+    px, py, pz = take!(results)
+    print("px : $(first(px))-$(last(px)) \t")
+    print("py : $(first(py))-$(last(py)) \t")
+    if length(pz) > 0
+        println("pz : $(first(pz))-$(last(pz))")
+    else
+        println("pz : 0-0")
+    end
     global n = n - 1
 end
