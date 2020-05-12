@@ -1,5 +1,6 @@
 # PrecisionMatrix
 
+![CI](https://github.com/pnavaro/PrecisionMatrix/workflows/CI/badge.svg)
 
 ```bash
 git clone https://github.com/pnavaro/PrecisionMatrix.git
