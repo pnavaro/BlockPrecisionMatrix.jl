@@ -42,35 +42,34 @@ function run_simulation()
 
     n_xy = length(index_xy)
 
-    local_pval = zeros(n_xy)
+    local_pval = SharedVector{Float64}(n_xy)
     
     # Parallel loop to compute single p-value
 
-    @sync for (i, (index_x, index_y)) in enumerate(index_xy)
+    @sync for (k, (index_x, index_y)) in enumerate(index_xy)
     
-        r = @spawnat :any begin
+        @spawnat :any begin
 
             println(" job $i $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
             n, p  = size(data)
             stat_test = PrecisionMatrix.StatTest(n, p)
             rng = MersenneTwister(myid())
-            PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+            local_pval[k] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
 
         end
 
-        local_pval[i] = fetch(r)
 
     end
 
     pval = zeros(Float64, (p,p))
 
-    for (i_xy, (index_x, index_y)) in enumerate(index_xy)
+    for (k, (index_x, index_y)) in enumerate(index_xy)
 
         points_x = findall(x -> x in index_x, blocks)
         points_y = findall(x -> x in index_y, blocks)
 
         for i in points_x, j in points_y
-            pval[i,j] = max(pval[i,j], local_pval[i_xy])
+            pval[i,j] = max(pval[i,j], local_pval[k])
             pval[j,i] = pval[i,j]
         end
     
