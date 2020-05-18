@@ -1,5 +1,7 @@
 using ReadOnlyArrays
 
+export generate_data
+
 """
     generate_data(rng, p, n, b, blocs_on )
 

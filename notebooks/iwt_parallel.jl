@@ -3,13 +3,11 @@ using Distributed
 import Hwloc
 
 rmprocs(workers())
-n = Hwloc.num_physical_cores()
+n = Hwloc.num_physical_cores() - 1
 addprocs(n, exeflags=`--project=$@__DIR__`)
 @show nprocs()
 
 #-
-
-@show myid()
 
 using UnicodePlots
 using Distributed
@@ -19,14 +17,11 @@ using CategoricalArrays
     using Pkg
     Pkg.instantiate()
     using SharedArrays
-    include(joinpath(@__DIR__, "../src/rotation_matrix.jl"))
-    include(joinpath(@__DIR__, "../src/structure_cov.jl"))
-    include(joinpath(@__DIR__, "../src/cov_simu.jl"))
-    include(joinpath(@__DIR__, "../src/generate_data.jl"))
-    include(joinpath(@__DIR__, "../src/stat_test.jl"))
-    include(joinpath(@__DIR__, "../src/permute_conditional.jl"))
-    include(joinpath(@__DIR__, "../src/precision_iwt.jl"))
+    using Random
+    using PrecisionMatrix
 end
+
+@everywhere println( " Everything is installed on $(myid()) " )
 
 function run_simulation()
 
@@ -43,19 +38,27 @@ function run_simulation()
     
     nblocks = length(levels(CategoricalArray(blocks)))
 
-    index_xy = index_blocks(blocks)
+    index_xy = PrecisionMatrix.index_blocks(blocks)
 
     n_xy = length(index_xy)
 
-    local_pval = SharedVector{Float64}(n_xy)
+    local_pval = zeros(n_xy)
     
     # Parallel loop to compute single p-value
-    n, p  = size(data)
-    stat_test = StatTest(n, p)
 
-    @sync for (i_xy, (index_x, index_y)) in enumerate(index_xy)
+    @sync for (i, (index_x, index_y)) in enumerate(index_xy)
     
-        @async local_pval[i_xy] = compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+        r = @spawnat :any begin
+
+            println(" job $i $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
+            n, p  = size(data)
+            stat_test = PrecisionMatrix.StatTest(n, p)
+            rng = MersenneTwister(myid())
+            PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+
+        end
+
+        local_pval[i] = fetch(r)
 
     end
 
