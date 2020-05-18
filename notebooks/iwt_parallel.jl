@@ -1,4 +1,6 @@
+using CategoricalArrays
 using Distributed
+using UnicodePlots
 
 import Hwloc
 
@@ -10,12 +12,6 @@ end
 
 @show nprocs()
 
-#-
-
-using UnicodePlots
-using Distributed
-using CategoricalArrays
-
 @everywhere begin
     using Pkg
     Pkg.instantiate()
@@ -24,7 +20,9 @@ using CategoricalArrays
     using PrecisionMatrix
 end
 
-@everywhere println( " Everything is installed on $(myid()) " )
+@sync for w in workers()
+   @spawnat w println( " Packages installed" )
+end
 
 function run_simulation()
 
@@ -55,7 +53,7 @@ function run_simulation()
             println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
             n, p  = size(data)
             stat_test = PrecisionMatrix.StatTest(n, p)
-            rng = MersenneTwister(myid())
+            rng = MersenneTwister(myid()+k)
             local_pval[k] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
 
         end
@@ -83,4 +81,3 @@ function run_simulation()
 end
 
 @time run_simulation()
-
