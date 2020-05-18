@@ -50,7 +50,7 @@ function run_simulation()
     
         @spawnat :any begin
 
-            println(" job $i $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
+            println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
             n, p  = size(data)
             stat_test = PrecisionMatrix.StatTest(n, p)
             rng = MersenneTwister(myid())
