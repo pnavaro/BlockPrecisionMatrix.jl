@@ -79,4 +79,4 @@ end
 
 @time pval = run_simulation()
 
-heatmap(pval, title="pval")
+display(heatmap(pval, title="pval"))
