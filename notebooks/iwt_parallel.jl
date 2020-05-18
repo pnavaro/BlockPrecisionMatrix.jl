@@ -37,7 +37,6 @@ function run_simulation()
     covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
     
     display(heatmap(covmat, title="covmat"))
-    display(heatmap(premat, title="premat"))
     
     nblocks = length(levels(CategoricalArray(blocks)))
 
@@ -77,11 +76,11 @@ function run_simulation()
         end
     
     end
-    
-    pval
 
+    display(heatmap(premat, title="premat"))
+    display(heatmap(pval, title="pval"))
+    
 end
 
-@time pval = run_simulation()
+@time run_simulation()
 
-display(heatmap(pval, title="pval"))
