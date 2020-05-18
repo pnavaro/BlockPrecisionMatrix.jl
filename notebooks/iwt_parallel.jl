@@ -2,9 +2,12 @@ using Distributed
 
 import Hwloc
 
-rmprocs(workers())
 n = Hwloc.num_physical_cores() - 1
-addprocs(n, exeflags=`--project=$@__DIR__`)
+if nprocs() != n+1
+    rmprocs(workers())
+    addprocs(n, exeflags=`--project`)
+end
+
 @show nprocs()
 
 #-
