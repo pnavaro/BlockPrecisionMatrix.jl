@@ -1,7 +1,6 @@
 using CategoricalArrays
 using Random
 
-
 function index_blocks(blocks)
 
     nblocks = length(levels(CategoricalArray(blocks)))
