@@ -12,7 +12,7 @@ using Distributions
 function structure_cov(rng :: AbstractRNG,
                        p :: Int, 
                        b :: Int, 
-                       blocs_on :: Vector{Vector{Int}} )
+                       blocs_on )
   
   blocs = sample(rng, 3:(p-2), (b-1), replace=false)
   sort!(blocs)
