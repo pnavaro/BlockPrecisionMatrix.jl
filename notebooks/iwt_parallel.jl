@@ -30,7 +30,7 @@ function run_simulation()
 
     p = 20 
     n = 1000
-    b = 5
+    b = 15
     rng = MersenneTwister(4272)
     blocs_on  = [[1,3]]
     
