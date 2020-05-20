@@ -1,4 +1,3 @@
-using CategoricalArrays
 using Distributed
 using UnicodePlots
 using ProgressMeter
@@ -19,6 +18,8 @@ end
     using SharedArrays
     using Random
     using PrecisionMatrix
+    using ParallelDataTransfer
+    using CategoricalArrays
 end
 
 @sync for w in workers()
@@ -30,45 +31,39 @@ function run_simulation()
     p = 20 
     n = 1000
     b = 5
-    rng = MersenneTwister(4272)
-    blocs_on  = [(1,3),(2,4)]
+    @everywhere rng = MersenneTwister(4272)
+    blocs_on  = [(2,4)]
     
     covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
-    
+
+    @passobj 1 workers() data
+    @passobj 1 workers() blocks
+
     display(heatmap(covmat, title="covmat"))
     
-    nblocks = length(levels(CategoricalArray(blocks)))
+    @everywhere begin
+        nblocks = length(levels(CategoricalArray(blocks)))
+        index_xy = PrecisionMatrix.index_blocks(blocks)
+        n_xy = length(index_xy)
+    end
 
-    index_xy = PrecisionMatrix.index_blocks(blocks)
-
-    n_xy = length(index_xy)
-
-    local_pval = SharedVector{Float64}(n_xy)
-    
-    bar = Progress(n_xy)
-    channel = RemoteChannel(()->Channel{Bool}(n_xy), 1)
     
     # Parallel loop to compute single p-value
-    @async while take!(channel)
-       next!(bar)
-    end
 
-    @sync for (k, (index_x, index_y)) in enumerate(index_xy)
-    
-        @spawnat :any begin
-
-            # println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
-            n, p  = size(data)
-            stat_test = PrecisionMatrix.StatTest(n, p)
+    @everywhere function compute_pval( local_pval )
+        n, p  = size(data)
+        PrecisionMatrix.StatTest(n, p)
+        i_xy = localindices(local_pval)
+        println(i_xy)
+        for k in i_xy
+            index_x, index_y = index_xy[k]
             local_pval[k] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
-            put!(channel, true) 
         end
-
     end
-
-    put!(channel, false) # this tells the printing task to finish
 
     pval = zeros(Float64, (p,p))
+
+    local_pval = SharedVector{Float64}(n_xy, init=compute_pval)
 
     for (k, (index_x, index_y)) in enumerate(index_xy)
 
