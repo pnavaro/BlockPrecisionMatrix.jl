@@ -46,7 +46,7 @@ function run_simulation()
     local_pval = SharedVector{Float64}(n_xy)
     
     bar = Progress(n_xy)
-    channel = RemoteChannel(()->Channel{Bool}(n_xy), 1)
+    channel = RemoteChannel(()->Channel{Bool}(1), 1)
     
     # Parallel loop to compute single p-value
     @async while take!(channel)
