@@ -31,54 +31,56 @@ function run_simulation()
     p = 20 
     n = 1000
     b = 5
-    @everywhere rng = MersenneTwister(4272)
-    blocs_on  = [(2,4)]
+    rng = MersenneTwister(4272)
+    blocs_on  = [(1,3)]
     
     covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
-    @passobj 1 workers() data
-    @passobj 1 workers() blocks
-
     display(heatmap(covmat, title="covmat"))
     
-    @everywhere begin
-        nblocks = length(levels(CategoricalArray(blocks)))
-        index_xy = PrecisionMatrix.index_blocks(blocks)
-        n_xy = length(index_xy)
-    end
-
-    
-    # Parallel loop to compute single p-value
-
-    @everywhere function compute_pval( local_pval )
-        n, p  = size(data)
-        PrecisionMatrix.StatTest(n, p)
-        i_xy = localindices(local_pval)
-        println(i_xy)
-        for k in i_xy
-            index_x, index_y = index_xy[k]
-            local_pval[k] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
-        end
-    end
+    nblocks = length(levels(CategoricalArray(blocks)))
+    index_xy = PrecisionMatrix.index_blocks(blocks)
+    n_xy = length(index_xy)
 
     pval = zeros(Float64, (p,p))
 
-    local_pval = SharedVector{Float64}(n_xy, init=compute_pval)
+    stat_test = PrecisionMatrix.StatTest(n, p)
 
-    for (k, (index_x, index_y)) in enumerate(index_xy)
+    bar = Progress(n_xy)
 
-        points_x = findall(x -> x in index_x, blocks)
-        points_y = findall(x -> x in index_y, blocks)
+    k = 1
+    r = Array{Future}(undef, nworkers())
 
-        for i in points_x, j in points_y
-            pval[i,j] = max(pval[i,j], local_pval[k])
-            pval[j,i] = pval[i,j]
+    for chunk in Iterators.partition( 1:n_xy, nworkers()) 
+
+        for (i,k) in enumerate(chunk)
+
+            w = workers()[i]
+            index_x, index_y  = index_xy[k]
+            println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
+            r[i] = @spawnat w PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+
         end
-    
+
+        for (i,k) in enumerate(chunk)
+
+              local_pval = fetch(r[i])
+              index_x, index_y  = index_xy[k]
+              points_x = findall(x -> x in index_x, blocks)
+              points_y = findall(x -> x in index_y, blocks)
+
+              for i in points_x, j in points_y
+                  pval[i,j] = max(pval[i,j], local_pval)
+                  pval[j,i] = pval[i,j]
+              end
+              display(heatmap(pval, title="pval"))
+
+        end
+
     end
+    
 
     display(heatmap(premat, title="premat"))
-    display(heatmap(pval, title="pval"))
     
 end
 
