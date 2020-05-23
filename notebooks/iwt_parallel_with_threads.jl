@@ -4,7 +4,7 @@ using PrecisionMatrix
 using CategoricalArrays
 import Base.Threads: @spawn, threadid, nthreads, @async, @sync
 
-function run_simulation()
+function run_with_threads()
 
     p = 20 
     n = 1000
@@ -29,9 +29,9 @@ function run_simulation()
             @spawn begin 
                 w = threadid()
                 stat_test = PrecisionMatrix.StatTest(n, p)
-                index_x, index_y  = index_xy[k]
-                println(" $(threadid()) job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
-                thread_pval[k][w] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+                i_x, i_y  = index_xy[k]
+                # println("$(threadid()) job $k $(first(i_x):last(i_x)) - $(first(i_y):last(i_y)) ")
+                thread_pval[k][w] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, i_x, i_y)
             end
 
         end
@@ -40,7 +40,6 @@ function run_simulation()
 
     local_pval = maximum.(thread_pval)
 
-    
     pval = zeros(Float64, (p,p))
 
     for k in eachindex(index_xy)
@@ -54,14 +53,13 @@ function run_simulation()
             pval[j,i] = pval[i,j]
         end
 
-        display(heatmap(pval, title="pval"))
-
     end
 
     
+    display(heatmap(pval, title="pval"))
 
     display(heatmap(premat, title="premat"))
     
 end
 
-@time run_simulation()
+@time run_with_threads()
