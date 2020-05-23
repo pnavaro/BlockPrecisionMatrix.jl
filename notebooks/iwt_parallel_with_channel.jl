@@ -25,13 +25,13 @@ end
    @spawnat w println( " Packages installed" )
 end
 
-function run_simulation()
+function run_with_channel()
 
     p = 20 
     n = 1000
     b = 5
     rng = MersenneTwister(4272)
-    blocs_on  = [(1,3),(2,4)]
+    blocs_on  = [(1,2),(3,4)]
     
     covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
     
@@ -53,7 +53,6 @@ function run_simulation()
 
     @async while take!(channel)
 
-        next!(bar)
         
         k, local_pval = take!(pvalues)
         index_x, index_y = index_xy[k]
@@ -66,8 +65,12 @@ function run_simulation()
             pval[j,i] = pval[i,j]
         end
         
+        next!(bar)
 
     end
+
+    n, p  = size(data)
+    stat_test = PrecisionMatrix.StatTest(n, p)
 
     # Parallel loop to compute single p-value
     @sync for k in eachindex(index_xy)
@@ -76,23 +79,23 @@ function run_simulation()
 
         @spawnat :any begin
 
-            # println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
-            n, p  = size(data)
-            stat_test = PrecisionMatrix.StatTest(n, p)
+            #println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
             result = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
             put!(pvalues, (k, result)) 
             put!(channel, true) 
         end
 
+
     end
 
     put!(channel, false) # this tells the printing task to finish
-    close(pvalues)
 
+    pval .-= minimum(pval)
+    pval ./= maximum(pval)
 
 	display(heatmap(pval, title="pval"))
     display(heatmap(premat, title="premat"))
     
 end
 
-@time run_simulation()
+@time run_with_channel()
