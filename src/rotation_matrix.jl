@@ -1,4 +1,5 @@
-using Random, LinearAlgebra
+using Random
+import LinearAlgebra: det, qr
 
 export rotation_matrix
 
