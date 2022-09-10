@@ -1,5 +1,5 @@
 using LinearAlgebra
-using NCVREG
+using NonConvexPenalizedRegression
 using PrecisionMatrix
 using Random
 using Statistics
