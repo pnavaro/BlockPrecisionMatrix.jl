@@ -51,7 +51,7 @@ function compute_pval(rng :: AbstractRNG, data,
             for j in 1:length(points_x)
                 y = view(data_x,:,j)
                 λ = 2*sqrt(var(view(data_x,:,1))*log(length(points_z))/n)
-                β = NCVREG.coef(NCVREG.SCAD(data_z, y, [λ]))
+                β = NonConvexPenalizedRegression.coef(NCVREG.SCAD(data_z, y, [λ]))
                 data_x_perm[:,j] .= vec(zz * β)
             end
                 
