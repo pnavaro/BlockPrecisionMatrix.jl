@@ -1,4 +1,4 @@
-import NCVREG
+import NonConvexPenalizedRegression
 
 """ 
     permute(rng, x, n) 
@@ -44,7 +44,7 @@ function permute_scad(rng :: AbstractRNG, Y, Z)
     for j in 1:col_y
         y = view(Y,:,j)
         λ = 2*sqrt(var(view(Y,:,1))*log(col_z)/row_z)
-        β = NCVREG.coef(NCVREG.SCAD(Z, y, [λ]))  
+        β = NonConvexPenalizedRegression.coef(NonConvexPenalizedRegression.SCAD(Z, y, [λ]))  
         fitted[:,j] .= vec(ZZ * β)
     end
     
