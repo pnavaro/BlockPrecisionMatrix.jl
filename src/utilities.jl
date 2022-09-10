@@ -2,7 +2,7 @@
     scad_mod(yvector,x,lambda)
 
 function returning the fitted values pf regression with the SCAD penalty (used for conditional permutations)
-"""
+""" 
 function scad_mod(yvector, x, lambda)
   regSCAD = ncvreg(x, yvector, penalty= :SCAD, lambda=lambda)
   n, p = size(re
@@ -10,11 +10,11 @@ function scad_mod(yvector, x, lambda)
   fitted
 end
 
-permute = function(x,n){
+function permute (x,n)
   permutation = sample(n)
   result = x[permutation,] 
-  return(result) 
-}
+  return result 
+end
 
 permute.conditional = function(y,n,data.complement,estimation){ # uses SCAD/OLS
   permutation = sample(n)
