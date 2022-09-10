@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-using Pkg
-pkg"add https://github.com/pnavaro/NCVREG.jl"
 
 using LinearAlgebra
 using Random
-using NCVREG
+using NonConvexPenalizedRegression
 using RCall
 using Statistics
 using Test
@@ -33,7 +31,7 @@ println( " R scad = $scad")
 
 λ = [0.2]
 
-scad = NCVREG.coef(SCAD(XX, y, λ))
+scad = NonConvexPenalizedRegression.coef(SCAD(XX, y, λ))
 
 println( " Julia scad = $scad")
 

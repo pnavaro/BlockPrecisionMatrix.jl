@@ -5,7 +5,7 @@ using LinearAlgebra
 using Distributions
 using GLMNet
 using InvertedIndices
-using NCVREG
+using NonConvexPenalizedRegression
 using InvertedIndices
 using Statistics
 using UnicodePlots
