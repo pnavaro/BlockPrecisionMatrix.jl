@@ -2,6 +2,14 @@
 using Lasso
 using InvertedIndices
 
+export StatTest
+
+"""
+    StatTest(n, p)
+
+We use the Xia estimator for the precision matrix
+
+"""
 struct StatTest
 
     n :: Int
@@ -36,12 +44,6 @@ struct StatTest
 
 end
 
-"""
-    stat_test(block1_perm, data_orig, points_x, points_y)
-
-We use the Xia estimator for the precision matrix
-
-"""
 function (self :: StatTest)(block1_perm, X, points_x, points_y)
     
     for i in eachindex(self.Xhat)

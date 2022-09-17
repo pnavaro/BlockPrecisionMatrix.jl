@@ -29,7 +29,14 @@ function permute_lm(rng, y, data_complement)
 
 end
 
+export permute_scad
 
+"""
+    permute_scad(rng, Y, Z)
+
+Reconstruct the data corresponding to the permuted residuals esimated 
+with SCAD regression.
+"""
 function permute_scad(rng :: AbstractRNG, Y, Z)
 
     row_y, col_y = size(Y)

@@ -1,16 +1,13 @@
 # BlockPrecisionMatrix.jl
 
-Documentation for BlockPrecisionMatrix.jl
+[A Visual Explanation of Statistical Testing](https://www.jwilber.me/permutationtest/)
 
-[Explication animée du principe des tests par permutations](https://www.jwilber.me/permutationtest/)
 
-Dans l'animation, ils illustrent un test sur la moyenne. 
+In the animation above, they illustrate a test on the mean. In our case, we want to apply the ideas of permutation tests (inverse of the covariance matrix) but to identify the null blocks of a precision matrix. A block will be null in the following situation.
 
-Dans notre cas, on veut appliquer les idées des tests par permutation (inverse de la matrice de covariance) mais pour identifier les blocs nuls d'une matrice de précision. Un bloc sera nul dans la situation suivante.
+Consider the blocks associated with the variables ``X`` and ``Y`` of a data set D such that
 
-Considérons les blocs associés aux variables X et Y d'un ensemble de données D tel que
-
-``D = (X,Y,Z)`` avec ``X \in R^{n,p_X}, Y \in R^{n,p_Y}, Z \in R^{n,p_Z}``
+``D = (X,Y,Z)`` with ``X \in R^{n,p_X}, Y \in R^{n,p_Y}, Z \in R^{n,p_Z}``
 
 ```math
 \begin{aligned}
@@ -19,41 +16,37 @@ Y & = \beta_Y [1,Z] + \epsilon_Y
 \end{aligned}
 ```
 
-alors le bloc ``P_{XY}`` est nul si ``\epsilon_X`` et ``\epsilon_Y`` sont indépendants ie si la matrice de corrélation de ``\epsilon_X`` avec ``\epsilon_Y`` est nulle.
+then the block ``P_{XY}`` is null if ``\epsilon_X`` and ``\epsilon_Y`` are independent ie if the correlation matrix of ``\epsilon_X`` with ``\epsilon_Y`` is null.
+ 
+So we apply the permutations to the residues ``\epsilon_X`` and/or
+``epsilon_Y``. To do this, we first need to estimate the
+linear model (this is where we use the SCAD estimation), recover the residuals,
+permute them and then reconstruct the
+data corresponding to the permuted residuals with [`permute_scad`](@ref).
 
-Du coup on applique les  permutations aux résidus ``\epsilon_X`` et/ou
-``\epsilon_Y``. Pour faire ça, on a d'abord besoin d'estimer le modèles
-linéaire (c'est ici qu'on utilise l'estimation avec SCAD), de
-récupérer les résidus, de les permuter puis de reconstruire les
-données corresopndant aux résidus permutés (-> fonction
-`permute.conditional`)
+To finish the test, we need to estimate the precision matrices associated with the permutations.
+We use the callable type [`StatTest`](@ref).
 
-```R
-  permute.conditional = function(y,n,data.complement,estimation){ # uses SCAD/OLS
-    permutation = sample(n)
-    
-    # SCAD/OLS estimaytion
-    fitted = switch(estimation, 
-                    LM=lm.fit(cbind(1,data.complement),y)$fitted,
-                    SCAD=apply(y,2,SCADmod,x=data.complement,lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
-    
-    residuals = y - fitted
-    
-    result = fitted + residuals[permutation,]
-    return(result) 
-  }
+```@docs
+permute_scad
 ```
 
-Pour finir le test, on a besion d'esitmer les matrices de précision associées aux permutations (-> fonction stat.test)
-
-```R
-  stat.test = function(block1.perm,block2,data.orig,points.x,points.y){
-    data.orig[,points.x] = block1.perm
-    PrecMat = PrecXia(data.orig)
-    #Rhohat = cor(block1,block2,method='pearson')
-    #Rohat.std = Rhohat^2/(1-Rhohat^2)
-    submat = PrecMat$TprecStd[points.x,points.y]
-    return(sum(submat)^2) # We use the Xia estimator for the precision matrix
-  }
+```@docs
+StatTest
 ```
 
+```@docs
+BlockPrecisionMatrix.cov_simu
+```
+```@docs
+BlockPrecisionMatrix.structure_cov
+```
+```@docs
+BlockPrecisionMatrix.generate_data
+```
+```@docs
+BlockPrecisionMatrix.permute
+```
+```@docs
+BlockPrecisionMatrix.iwt_block_precision
+```
