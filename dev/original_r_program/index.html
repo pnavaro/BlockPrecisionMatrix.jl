@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Function estimating the precision matrix with the method from Xia et al (code Madison) · BlockPrecisionMatrix.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://pnavaro.github.io/BlockPrecisionMatrix.jl/original_r_program/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">BlockPrecisionMatrix.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Function estimating the precision matrix with the method from Xia et al (code Madison)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Function estimating the precision matrix with the method from Xia et al (code Madison)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/pnavaro/BlockPrecisionMatrix.jl/blob/main/docs/src/original_r_program.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Function-estimating-the-precision-matrix-with-the-method-from-Xia-et-al-(code-Madison)"><a class="docs-heading-anchor" href="#Function-estimating-the-precision-matrix-with-the-method-from-Xia-et-al-(code-Madison)">Function estimating the precision matrix with the method from Xia et al (code Madison)</a><a id="Function-estimating-the-precision-matrix-with-the-method-from-Xia-et-al-(code-Madison)-1"></a><a class="docs-heading-anchor-permalink" href="#Function-estimating-the-precision-matrix-with-the-method-from-Xia-et-al-(code-Madison)" title="Permalink"></a></h1><pre><code class="language-R hljs">library(glmnet)
+
+PrecXia = function(X){
+  n = nrow(X)
+  betahat = matrix(0,ncol(X)-1,ncol(X))
+  reshat  = X
+  for (k in 1:ncol(X)){
+    fitreg  = glmnet(X[,-k],X[,k],family=&quot;gaussian&quot;,lambda = 2*sqrt(var(X[,k])*log(ncol(X))/nrow(X)),standardize = FALSE) 
+    betahat[,k] = as.vector(fitreg$beta)
+    reshat[,k]  = X[,k]-as.vector(predict(fitreg,X[,-k]))
+  }
+  rtilde = cov(reshat)*(n-1)/n
+  rhat   = rtilde
+  for (i in 1:(ncol(X)-1)){
+    for (j in (i+1):ncol(X)){
+      rhat[i,j] = -(rtilde[i,j]+rtilde[i,i]*betahat[i,j]+rtilde[j,j]*betahat[j-1,i])
+      rhat[j,i] = rhat[i,j]
+    }
+  }
+  Tprec  = 1/rhat
+  TprecStd = Tprec
+  for (i in 1:(ncol(X)-1)){
+    for (j in (i+1):ncol(X)){
+      Tprec[i,j] = Tprec[j,i] = rhat[i,j]/(rhat[i,i]*rhat[j,j])
+      thetahatij = (1+(betahat[i,j]^2*rhat[i,i]/rhat[j,j]))/(n*rhat[i,i]*rhat[j,j])   
+      TprecStd[i,j] = TprecStd[j,i] = Tprec[i,j]/sqrt(thetahatij)
+    }
+  }
+  
+  MatPrecXia = list(Tprec=Tprec,TprecStd=TprecStd)
+}</code></pre><h1 id="Function-performing-the-test-on-blocks-and-adjusting-the-results"><a class="docs-heading-anchor" href="#Function-performing-the-test-on-blocks-and-adjusting-the-results">Function performing the test on blocks and adjusting the results</a><a id="Function-performing-the-test-on-blocks-and-adjusting-the-results-1"></a><a class="docs-heading-anchor-permalink" href="#Function-performing-the-test-on-blocks-and-adjusting-the-results" title="Permalink"></a></h1><ul><li>inputs:<ul><li>data: data matrix (n*p) where n is the sample size and p the number of grid points (for now. it will be spline coefficients?)</li><li>blocks: vector of length p containing block indexes (numeric, from 1 to number of blocks) for each grid point</li><li>B: number of permutations done to evaluate the tests p-values</li></ul></li></ul><pre><code class="language-R hljs">IWT_Block_precision &lt;- function(data,blocks,B=1000,estimation=&#39;SCAD&#39;){  
+  
+  n &lt;- dim(data)[1]
+  p = dim(data)[2]
+  nblocks = length(levels(factor(blocks)))
+  
+  stat.test = function(block1.perm,block2,data.orig,points.x,points.y){
+    data.orig[,points.x] = block1.perm
+    PrecMat = PrecXia(data.orig)
+    #Rhohat = cor(block1,block2,method=&#39;pearson&#39;)
+    #Rohat.std = Rhohat^2/(1-Rhohat^2)
+    submat = PrecMat$TprecStd[points.x,points.y]
+    return(sum(submat)^2) # We use the Xia estimator for the precision matrix
+  }
+  
+  # Permutation test:
+  #T_coeff &lt;- array(dim=c(B,p,p)) # permuted test statistics
+  permute = function(x,n){
+    permutation = sample(n)
+    result = x[permutation,] 
+    return(result) 
+  }
+  permute.conditional = function(y,n,data.complement,estimation){ # uses SCAD/OLS
+    permutation = sample(n)
+    
+    # SCAD/OLS estimaytion
+    fitted = switch(estimation, 
+                    LM=lm.fit(cbind(1,data.complement),y)$fitted,
+                    SCAD=apply(y,2,SCADmod,x=data.complement,lambda=2*sqrt(var(y[,1])*log(ncol(data.complement))/nrow(data.complement))))
+    
+    residuals = y - fitted
+    
+    result = fitted + residuals[permutation,]
+    return(result) 
+  }
+  
+  
+  # tests on rectangles
+  pval_array = array(dim=c(2,p,p))
+  corrected.pval = matrix(0,nrow=p,ncol=p)
+  seeds = round(runif(B,0,1000000))
+  
+  responsible.test = matrix(nrow=p,ncol=p)
+  ntests.blocks = zeromatrix = matrix(0,nrow=p,ncol=p)
+  
+  # For parallelization: the loops are independent between each other, so they can be easily parallelized. 
+  # The only point to pay attention to is that for computing the adjusted p-value, the maximization is done at the end of each loop.
+  # It would also be possible to save all the results of each loop instead (in an array) and do the maximization only once at the end.
+  for(ix in 2:nblocks){ # x coordinate starting point. 
+    for(lx in 0:(nblocks-ix)){ # length on x axis of the rectangle
+      index.x = ix:(ix+lx) # index first block
+      points.x = which(blocks %in% index.x) # coefficients in block index.x
+      data.B1 = data[,points.x] # data of the first block
+      
+      data.B1.array = array(data=data.B1,dim=c(n,dim(data.B1)[2],B)) # tableau de copies de data.B1
+      data.B1.list = lapply(seq(dim(data.B1.array)[3]), function(x) data.B1.array[ , , x]) # liste de copies de data.B1
+      
+      for(iy in 1:(ix-1)){ # y coordinate starting point. stops before the diagonal
+        for(ly in 0:(ix-iy-1)){ # length on y axis of the rectangle
+          # data of the second block
+          index.y = iy:(iy+ly) # index second block
+          points.y = which(blocks %in% index.y)
+          data.B2 = data[,points.y]
+          
+          index.complement = (1:nblocks)[-c(index.x,index.y)]
+          points.complement = which(blocks %in% index.complement)
+          data.complement = data[,points.complement]
+          
+          # print(paste0(&#39;x:&#39;,index.x))
+          # print(paste0(&#39;y:&#39;,index.y))
+          # print(paste0(&#39;c:&#39;, index.complement))
+          
+          # permuted data of the first block
+          ncol = dim(data.complement)[2]
+          
+          if(ncol &gt; 0){
+            # A chaque élément de la liste de copies de data.B1.list, 
+            # on applique permute.conditional
+            data.B1.perm.l = lapply(data.B1.list,permute.conditional,n=n,data.complement=data.complement,estimation=estimation)
+          }else{
+            data.B1.perm.l = lapply(data.B1.list,permute,n=n)
+          }
+          
+          data.B1.perm = simplify2array(data.B1.perm.l)
+
+          testmatrix = zeromatrix
+          testmatrix[points.x,points.y] = 1
+          ntests.blocks = ntests.blocks + testmatrix
+          image.plot(ntests.blocks,main=paste0(&#39;Blocks: &#39;,index.x,&#39;-&#39;,index.y))
+          image.plot(testmatrix,main=paste0(&#39;Blocks: &#39;,index.x,&#39;-&#39;,index.y))
+          # Estimation de la statistique de test pour les 2 blocs considérés
+          T0.tmp = stat.test(data.B1,data.B2,data.orig=data,points.x=points.x,points.y=points.y)
+          # Estimation de la statistique de test pour chacune des parmutations
+          Tperm.tmp = apply(data.B1.perm,3,stat.test,block2=data.B2,data.orig=data,points.x=points.x,points.y=points.y)
+          # calcul de la p-value
+          pval.tmp = mean(Tperm.tmp &gt;= T0.tmp)
+
+          corrected.pval_temp = matrix(0,nrow=p,ncol=p)
+          corrected.pval_temp[points.x,points.y] = pval.tmp
+          corrected.pval_temp[points.y,points.x] = pval.tmp # simmetrization
+          
+          pval_array[1,,] = corrected.pval # old adjusted p-value
+          pval_array[2,,] = corrected.pval_temp # p-value resulting from the test of this block
+
+          corrected.pval = apply(pval_array,c(2,3),max) # maximization for updating the adjusted p-value
+
+          index = apply(pval_array,c(2,3),which.max)
+          responsible.test[which(index==2)] = paste0(paste0(index.x,collapse=&#39;,&#39;),&#39;-&#39;,paste0(index.y,collapse=&#39;,&#39;))
+        }
+      }
+    }
+  }
+  return(list(corrected.pval=corrected.pval,responsible.test=responsible.test,ntests.blocks=ntests.blocks))
+}
+</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Saturday 17 September 2022 08:40">Saturday 17 September 2022</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
