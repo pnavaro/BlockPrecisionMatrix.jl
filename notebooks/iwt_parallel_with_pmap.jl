@@ -18,7 +18,7 @@ end
     Pkg.instantiate()
     using SharedArrays
     using Random
-    using PrecisionMatrix
+    using BlockPrecisionMatrix
     using ParallelDataTransfer
 end
 
@@ -43,13 +43,13 @@ function run_simulation()
     @everywhere begin
 
         n, p = size(data) 
-        stat_test = PrecisionMatrix.StatTest(n, p)
-        index_xy = PrecisionMatrix.index_blocks(blocks)
+        stat_test = BlockPrecisionMatrix.StatTest(n, p)
+        index_xy = BlockPrecisionMatrix.index_blocks(blocks)
 
         function compute_pval( i_xy )
             ix, iy = i_xy
             println(" $(first(ix):last(ix)) - $(first(iy):last(iy)) ")
-            PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, ix, iy)
+            BlockPrecisionMatrix.compute_pval(rng, data, stat_test, blocks, ix, iy)
         end
 
     end

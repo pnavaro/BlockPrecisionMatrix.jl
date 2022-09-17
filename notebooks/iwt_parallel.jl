@@ -18,7 +18,7 @@ end
     Pkg.instantiate()
     using SharedArrays
     using Random
-    using PrecisionMatrix
+    using BlockPrecisionMatrix
 end
 
 @sync for w in workers()
@@ -39,7 +39,7 @@ function run_simulation()
     
     nblocks = length(levels(CategoricalArray(blocks)))
 
-    index_xy = PrecisionMatrix.index_blocks(blocks)
+    index_xy = BlockPrecisionMatrix.index_blocks(blocks)
 
     n_xy = length(index_xy)
 
@@ -59,8 +59,8 @@ function run_simulation()
 
             # println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
             n, p  = size(data)
-            stat_test = PrecisionMatrix.StatTest(n, p)
-            local_pval[k] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+            stat_test = BlockPrecisionMatrix.StatTest(n, p)
+            local_pval[k] = BlockPrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
             put!(channel, true) 
         end
 

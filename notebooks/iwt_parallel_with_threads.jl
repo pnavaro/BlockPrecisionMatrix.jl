@@ -1,6 +1,6 @@
 using UnicodePlots
 using Random
-using PrecisionMatrix
+using BlockPrecisionMatrix
 using CategoricalArrays
 import Base.Threads: @spawn, threadid, nthreads, @async, @sync
 
@@ -17,7 +17,7 @@ function run_with_threads()
     display(heatmap(covmat, title="covmat"))
     
     nblocks = length(levels(CategoricalArray(blocks)))
-    index_xy = PrecisionMatrix.index_blocks(blocks)
+    index_xy = BlockPrecisionMatrix.index_blocks(blocks)
     n_xy = length(index_xy)
 
     thread_pval = [zeros(nthreads()) for _ in 1:n_xy]
@@ -28,10 +28,10 @@ function run_with_threads()
 
             @spawn begin 
                 w = threadid()
-                stat_test = PrecisionMatrix.StatTest(n, p)
+                stat_test = BlockPrecisionMatrix.StatTest(n, p)
                 i_x, i_y  = index_xy[k]
                 # println("$(threadid()) job $k $(first(i_x):last(i_x)) - $(first(i_y):last(i_y)) ")
-                thread_pval[k][w] = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, i_x, i_y)
+                thread_pval[k][w] = BlockPrecisionMatrix.compute_pval(rng, data, stat_test, blocks, i_x, i_y)
             end
 
         end

@@ -1,6 +1,6 @@
 @testset "Permutation" begin
 
-    import PrecisionMatrix: permute_scad
+    import BlockPrecisionMatrix: permute_scad
 
     rng = MersenneTwister(111)
 

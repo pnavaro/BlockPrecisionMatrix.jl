@@ -1,6 +1,6 @@
 using LinearAlgebra
 using NonConvexPenalizedRegression
-using PrecisionMatrix
+using BlockPrecisionMatrix
 using Random
 using Statistics
 using Test

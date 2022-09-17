@@ -1,4 +1,4 @@
-name = "PrecisionMatrix"
+name = "BlockPrecisionMatrix"
 uuid = "afff2849-e78a-40d9-8939-5c1a05aaf5fc"
 authors = ["Marie Morvan", "Pierre Navaro"]
 version = "0.1.0"

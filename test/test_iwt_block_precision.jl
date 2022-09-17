@@ -2,8 +2,8 @@
 
 using UnicodePlots
 
-import PrecisionMatrix: structure_cov, cov_simu, generate_data
-import PrecisionMatrix: permute, permute_scad, iwt_block_precision
+import BlockPrecisionMatrix: structure_cov, cov_simu, generate_data
+import BlockPrecisionMatrix: permute, permute_scad, iwt_block_precision
 
 p = 10 
 n = 500

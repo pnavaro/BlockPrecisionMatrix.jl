@@ -1,0 +1,15 @@
+vi docs/make.jl
+vi docs/src/index.md
+vi notebooks/iwt_parallel_with_channel.jl
+vi notebooks/iwt_parallel_with_images.jl
+vi notebooks/iwt_parallel.jl
+vi notebooks/iwt_parallel_with_threads.jl
+vi notebooks/test_stat_test.jl
+vi notebooks/iwt_parallel_with_pmap.jl
+vi src/generate_data.jl
+vi src/PrecisionMatrix.jl
+vi test/runtests.jl
+vi test/test_structure_cov.jl
+vi test/test_iwt_block_precision.jl
+vi test/test_permute_conditional.jl
+vi test/test_rotation_matrix.jl
