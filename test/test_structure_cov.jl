@@ -1,5 +1,5 @@
 using Random
-using PrecisionMatrix
+using BlockPrecisionMatrix
 using Distributions
 
 @testset "Simulation functions" begin

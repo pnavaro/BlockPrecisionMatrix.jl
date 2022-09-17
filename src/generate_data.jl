@@ -13,7 +13,7 @@ matrix with blocks.
 ```julia
 using Random
 using UnicodePlots
-import PrecisionMatrix.generate_data
+import BlockPrecisionMatrix.generate_data
 
 p = 10 
 n = 500

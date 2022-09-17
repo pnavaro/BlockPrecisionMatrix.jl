@@ -1,6 +1,6 @@
-# PrecisionMatrix.jl
+# BlockPrecisionMatrix.jl
 
-Documentation for PrecisionMatrix.jl
+Documentation for BlockPrecisionMatrix.jl
 
 [Explication animée du principe des tests par permutations](https://www.jwilber.me/permutationtest/)
 

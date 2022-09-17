@@ -1,4 +1,4 @@
-# PrecisionMatrix.jl
+# BlockPrecisionMatrix.jl
 
 This computation is a nice exemple to test parallelization in Julia. In notebooks directory
 you find different ways to parallelize the same process. I used `pmap`, `Distributed channel` and `threads`.

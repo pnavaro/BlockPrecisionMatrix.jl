@@ -1,4 +1,4 @@
-module PrecisionMatrix
+module BlockPrecisionMatrix
 
 using LinearAlgebra
 using Random

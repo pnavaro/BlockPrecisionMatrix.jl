@@ -18,7 +18,7 @@ end
     Pkg.instantiate()
     using SharedArrays
     using Random
-    using PrecisionMatrix
+    using BlockPrecisionMatrix
 end
 
 @sync for w in workers()
@@ -39,7 +39,7 @@ function run_with_channel()
     
     nblocks = length(levels(CategoricalArray(blocks)))
 
-    index_xy = PrecisionMatrix.index_blocks(blocks)
+    index_xy = BlockPrecisionMatrix.index_blocks(blocks)
 
     n_xy = length(index_xy)
 
@@ -70,7 +70,7 @@ function run_with_channel()
     end
 
     n, p  = size(data)
-    stat_test = PrecisionMatrix.StatTest(n, p)
+    stat_test = BlockPrecisionMatrix.StatTest(n, p)
 
     # Parallel loop to compute single p-value
     @sync for k in eachindex(index_xy)
@@ -80,7 +80,7 @@ function run_with_channel()
         @spawnat :any begin
 
             #println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
-            result = PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+            result = BlockPrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
             put!(pvalues, (k, result)) 
             put!(channel, true) 
         end

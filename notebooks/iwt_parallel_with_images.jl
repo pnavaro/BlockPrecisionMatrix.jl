@@ -17,7 +17,7 @@ end
     Pkg.instantiate()
     using SharedArrays
     using Random
-    using PrecisionMatrix
+    using BlockPrecisionMatrix
     using ParallelDataTransfer
     using CategoricalArrays
 end
@@ -39,12 +39,12 @@ function run_simulation()
     display(heatmap(covmat, title="covmat"))
     
     nblocks = length(levels(CategoricalArray(blocks)))
-    index_xy = PrecisionMatrix.index_blocks(blocks)
+    index_xy = BlockPrecisionMatrix.index_blocks(blocks)
     n_xy = length(index_xy)
 
     pval = zeros(Float64, (p,p))
 
-    stat_test = PrecisionMatrix.StatTest(n, p)
+    stat_test = BlockPrecisionMatrix.StatTest(n, p)
 
     bar = Progress(n_xy)
 
@@ -58,7 +58,7 @@ function run_simulation()
             w = workers()[i]
             index_x, index_y  = index_xy[k]
             println(" job $k $(first(index_x):last(index_x)) - $(first(index_y):last(index_y)) ")
-            r[i] = @spawnat w PrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
+            r[i] = @spawnat w BlockPrecisionMatrix.compute_pval(rng, data, stat_test, blocks, index_x, index_y)
 
         end
 

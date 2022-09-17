@@ -1,19 +1,19 @@
 push!(LOAD_PATH,"../src/")
 
 using Documenter
-using PrecisionMatrix
+using BlockPrecisionMatrix
 
 makedocs(
-    repo="https://github.com/pnavaro/PrecisionMatrix/blob/{commit}{path}#L{line}",
-    sitename = "PrecisionMatrix",
+    repo="https://github.com/pnavaro/BlockPrecisionMatrix.jl/blob/{commit}{path}#L{line}",
+    sitename = "BlockPrecisionMatrix.jl",
     format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true",
-        canonical="https://pnavaro.github.io/PrecisionMatrix"),
-    modules = [PrecisionMatrix],
+        canonical="https://pnavaro.github.io/BlockPrecisionMatrix.jl"),
+    modules = [BlockPrecisionMatrix],
     pages=[
         "Home" => "index.md",
     ]
 )
 
 deploydocs(;
-    repo="github.com/pnavaro/PrecisionMatrix",
+    repo="github.com/pnavaro/BlockPrecisionMatrix.jl",
 )

@@ -216,7 +216,7 @@ ref
 
 """
 
-import PrecisionMatrix:StatTest
+import BlockPrecisionMatrix:StatTest
 
 n = 500
 p = 20
