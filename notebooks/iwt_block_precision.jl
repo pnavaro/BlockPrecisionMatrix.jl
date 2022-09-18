@@ -9,13 +9,8 @@ using NonConvexPenalizedRegression
 using InvertedIndices
 using Statistics
 using UnicodePlots
-
-include("../src/rotation_matrix.jl")
-include("../src/structure_cov.jl")
-include("../src/cov_simu.jl")
-include("../src/generate_data.jl")
-include("../src/stat_test.jl")
-include("../src/permute_conditional.jl")
+using BlockPrecisionMatrix
+import BlockPrecisionMatrix: permute
 
 function iwt_block_precision(data, blocks; B=1000)
     
