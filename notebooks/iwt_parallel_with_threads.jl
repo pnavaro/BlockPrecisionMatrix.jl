@@ -18,11 +18,11 @@ function run_with_threads()
     
     nblocks = length(levels(CategoricalArray(blocks)))
     index_xy = BlockPrecisionMatrix.index_blocks(blocks)
-    n_xy = length(index_xy)
+    @show n_xy = length(index_xy)
 
     thread_pval = [zeros(nthreads()) for _ in 1:n_xy]
 
-    @sync for chunk in Iterators.partition( 1:n_xy, nthreads()) 
+    @sync for chunk in Iterators.partition( 1:n_xy, n_xy ÷ nthreads()) 
 
         @async for k in chunk
 
