@@ -1,7 +1,9 @@
-using Lasso
+using BenchmarkTools
 using GLMNet, GLM
 using InvertedIndices
-using BenchmarkTools
+using Lasso
+using LinearAlgebra
+using Random
 using Test
 
 function test_glmnet(X)
@@ -53,6 +55,7 @@ function test_lasso(X)
 end
 
 rng = MersenneTwister(12)
+n = 1000
 Z = randn(rng, n, 5)
 X = randn(rng, n, 3)
 Y = hcat( X * ones(3) .+ 0.1 * randn(rng, n), Z .+ 0.1*randn(rng, n,5))

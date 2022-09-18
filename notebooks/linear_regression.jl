@@ -78,4 +78,4 @@ fitted = lm(XX, y)
 # -
 
 scatter( X[:,1], y)
-plot!(x, predict(fitted, hcat(ones(npoints),x)))
+plot!(x, GLM.predict(fitted, hcat(ones(npoints),x)))
