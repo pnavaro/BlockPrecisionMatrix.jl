@@ -4,7 +4,7 @@ This computation is a nice exemple to test parallelization in Julia. In notebook
 you find different ways to parallelize the same process. I used `pmap`, `Distributed channel` and `threads`.
 
 ![CI](https://github.com/pnavaro/BlockPrecisionMatrix.jl/workflows/CI/badge.svg)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://pnavaro.github.io/BlockPrecisionMatrix/dev)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://pnavaro.github.io/BlockPrecisionMatrix.jl/)
 
 ```bash
 git clone https://github.com/pnavaro/BlockPrecisionMatrix.jl.git
