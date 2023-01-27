@@ -19,7 +19,7 @@ Y & = \beta_Y [1,Z] + \epsilon_Y
 then the block ``P_{XY}`` is null if ``\epsilon_X`` and ``\epsilon_Y`` are independent ie if the correlation matrix of ``\epsilon_X`` with ``\epsilon_Y`` is null.
  
 So we apply the permutations to the residues ``\epsilon_X`` and/or
-``epsilon_Y``. To do this, we first need to estimate the
+``\epsilon_Y``. To do this, we first need to estimate the
 linear model (this is where we use the SCAD estimation), recover the residuals,
 permute them and then reconstruct the
 data corresponding to the permuted residuals with [`permute_scad`](@ref).
