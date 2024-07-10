@@ -6,11 +6,12 @@ import Base.Threads: @spawn, threadid, nthreads, @async, @sync
 
 function run_with_threads()
 
-    p = 20 
-    n = 1000
-    b = 5
+    @show p = 20 
+    @show n = 1000
+    @show b = 5
+    @show blocs_on  = [(1,3)]
+
     rng = MersenneTwister(4272)
-    blocs_on  = [(1,3)]
     
     covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
