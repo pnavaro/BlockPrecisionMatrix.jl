@@ -26,11 +26,12 @@ end
    @spawnat w println( " Packages installed" )
 end
 
-p = 20 
-n = 1000
-b = 5
+const p = 20 
+const n = 1000
+const b = 5
+const blocs_on  = [(1,3)]
+
 @everywhere rng = MersenneTwister(4272)
-blocs_on  = [(1,3)]
 
 covmat, premat, data, blocks = generate_data(rng, p, n, b, blocs_on)
 
