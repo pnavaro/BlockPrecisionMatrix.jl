@@ -1,7 +1,7 @@
 name = "BlockPrecisionMatrix"
 uuid = "afff2849-e78a-40d9-8939-5c1a05aaf5fc"
-authors = ["Marie Morvan", "Pierre Navaro"]
 version = "0.1.0"
+authors = ["Marie Morvan", "Pierre Navaro"]
 
 [deps]
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
@@ -21,7 +21,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
 
 [compat]
-CategoricalArrays = "0.9, 0.10"
+CategoricalArrays = "0.9, 0.10, 1"
 Distributions = "0.24, 0.25"
 GLM = "1.9.0"
 GLMNet = "0.7.4"
